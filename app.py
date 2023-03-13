@@ -31,7 +31,7 @@ app = Flask(__name__)
 
 fb_bot_api = FacebookBotApi("EAALLVlmF4dEBAJLmUBIKWoHvghSXNu9qPeys4WLqar1nCyGSRRJujZCkZAv3x7ffpu5FPmWqO6viMnJOZCARgB5Af2nQNxU3fCnd89uJmYHpPVrWZCsanaqdnZAny1Y5ZA59LKkjQ9qKEKE2RginD57J3ngOr84j58QKSZBl475MfUwxZCtZAtR47")
 
-handler = WebhookHandler()
+handler = WebhookHandler("433e77e8683641064b50356bffe8c31b")
 
 @app.route('/callback', methods=['GET'])
 def verify():
