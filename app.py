@@ -33,6 +33,10 @@ fb_bot_api = FacebookBotApi(ACCESS_TOKEN)
 
 handler = WebhookHandler()
 
+@app.route('/')
+def index():
+    return "<p>Success</p>"
+
 @app.route('/callback', methods=['GET'])
 def verify():
     
