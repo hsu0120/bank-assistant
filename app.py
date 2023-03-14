@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request
 
 from facebookbot import (
@@ -25,11 +26,10 @@ from facebookbot.models import (
 
 app = Flask(__name__)
 
+ACCESS_TOKEN = os.environ.get('PAGE_TOKEN')
+VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
-
-
-
-fb_bot_api = FacebookBotApi("EAALLVlmF4dEBAJLmUBIKWoHvghSXNu9qPeys4WLqar1nCyGSRRJujZCkZAv3x7ffpu5FPmWqO6viMnJOZCARgB5Af2nQNxU3fCnd89uJmYHpPVrWZCsanaqdnZAny1Y5ZA59LKkjQ9qKEKE2RginD57J3ngOr84j58QKSZBl475MfUwxZCtZAtR47")
+fb_bot_api = FacebookBotApi(ACCESS_TOKEN)
 
 handler = WebhookHandler()
 
@@ -38,7 +38,7 @@ def verify():
     
     if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.challenge"):
         
-        if not request.args.get("hub.verify_token") == "JHThx2k5yaSKw6emVhw3Gw":
+        if not request.args.get("hub.verify_token") == VERIFY_TOKEN:
             return "Verification token mismatch", 403
         return request.args["hub.challenge"], 200
 
@@ -324,4 +324,5 @@ def handle_unlinking(event):
     print("event.UnLinkingEvent")    
 
 if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0')
