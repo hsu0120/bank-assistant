@@ -171,54 +171,124 @@ def handle_text_message(event):
     
     user_id = event.sender.id
     
-    fb_bot_api.push_message(
-        user_id, 
-        message=text
-    )
+#     fb_bot_api.push_message(
+#         user_id, 
+#         message=text
+#     )
     
-#     if text == "profile":
+    if text == "profile":
         
-#         profile = fb_bot_api.get_profile(user_id)
+        profile = fb_bot_api.get_profile(user_id)
         
-#         fb_bot_api.push_message(
-#             user_id, 
-#             message=TextSendMessage(text='Display name: ' + profile.last_name + profile.first)
-#         )
-#     if text == "buttons":
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(text='Display name: ' + profile.last_name + profile.first)
+        )
+    if text == "buttons":
         
-#         buttons_template_message = TemplateSendMessage(
-#             template=ButtonsTemplate(
-#                 text="Buttons template",
-#                 buttons=[
-#                     PostbackAction(
-#                         title="postback",
-#                         payload="action=buy&itemid=1"
-#                     ),
-#                     URLAction(
-#                         title="url",
-#                         url="http://example.com/",
-#                         webview_height_ratio='full',
-#                         messenger_extensions=None,
-#                         fallback_url=None
-#                     )
-#                 ]
-#             )
-#         )
+        buttons_template_message = TemplateSendMessage(
+            template=ButtonsTemplate(
+                text="Buttons template",
+                buttons=[
+                    PostbackAction(
+                        title="postback",
+                        payload="action=buy&itemid=1"
+                    ),
+                    URLAction(
+                        title="url",
+                        url="http://example.com/",
+                        webview_height_ratio='full',
+                        messenger_extensions=None,
+                        fallback_url=None
+                    )
+                ]
+            )
+        )
         
-#         fb_bot_api.push_message(
-#             user_id, 
-#             message=buttons_template_message
-#         )
-#     if text == "generic":
+        fb_bot_api.push_message(
+            user_id, 
+            message=buttons_template_message
+        )
+    if text == "generic":
         
-#         generic_template_message = TemplateSendMessage(
-#             template=GenericTemplate(
+        generic_template_message = TemplateSendMessage(
+            template=GenericTemplate(
+                elements=[
+                    GenericElement(
+                        title="GenericElement 1",
+                        image_url="https://example.com/item1.jpg",
+                        subtitle="description1",
+                        default_action=URLAction(url="http://example.com/"),
+                        buttons=[
+                            PostbackAction(title="postback_1", payload="data_1"),
+                            URLAction(
+                                title="url_1",
+                                url="http://example.com/1",
+                                webview_height_ratio='full',
+                                messenger_extensions=None,
+                                fallback_url=None
+                            )
+                        ]
+                    ),
+                    GenericElement(
+                        title="GenericElement 2",
+                        image_url="https://example.com/item2.jpg",
+                        subtitle="description2",
+                        default_action=URLAction(url="http://example.com/"),
+                        buttons=[
+                            PostbackAction(title="postback_2", payload="data_2"),
+                            URLAction(
+                                title="url_2",
+                                url="http://example.com/2",
+                                webview_height_ratio='compact',
+                                messenger_extensions=None,
+                                fallback_url=None
+                            )
+                        ]
+                    )
+                ]
+            )
+        )        
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=generic_template_message
+        )        
+        
+    if text == "media":
+        
+        # by URL
+        image_send_message = ImageSendMessage(url="https://via.placeholder.com/1024x1024")
+
+        attachment_id = fb_bot_api.upload_attachment(image_send_message)        
+        
+        media_template_message = TemplateSendMessage(
+            template=MediaTemplate(
+                elements=[
+                    ImageElement(
+                        attachment_id=attachment_id,
+                        buttons=[
+                            PostbackAction(title="postback_1", payload="data_1"),
+                        ]
+                    )
+                ]
+            )
+        )
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=media_template_message
+        )           
+        
+        # by facebook
+        
+#         media_template_message = TemplateSendMessage(
+#             template=MediaTemplate(
 #                 elements=[
-#                     GenericElement(
-#                         title="GenericElement 1",
-#                         image_url="https://example.com/item1.jpg",
-#                         subtitle="description1",
-#                         default_action=URLAction(url="http://example.com/"),
+#                     VideoElement(
+#                         # see documents: 
+#                         # https://developers.facebook.com/docs/messenger-platform/send-messages/template/media#facebook_url
+#                         facebook_url="https://www.facebook.com/{USER_NAME}/videos/<NUMERIC_ID>/",
 #                         buttons=[
 #                             PostbackAction(title="postback_1", payload="data_1"),
 #                             URLAction(
@@ -229,47 +299,6 @@ def handle_text_message(event):
 #                                 fallback_url=None
 #                             )
 #                         ]
-#                     ),
-#                     GenericElement(
-#                         title="GenericElement 2",
-#                         image_url="https://example.com/item2.jpg",
-#                         subtitle="description2",
-#                         default_action=URLAction(url="http://example.com/"),
-#                         buttons=[
-#                             PostbackAction(title="postback_2", payload="data_2"),
-#                             URLAction(
-#                                 title="url_2",
-#                                 url="http://example.com/2",
-#                                 webview_height_ratio='compact',
-#                                 messenger_extensions=None,
-#                                 fallback_url=None
-#                             )
-#                         ]
-#                     )
-#                 ]
-#             )
-#         )        
-        
-#         fb_bot_api.push_message(
-#             user_id, 
-#             message=generic_template_message
-#         )        
-        
-#     if text == "media":
-        
-#         # by URL
-#         image_send_message = ImageSendMessage(url="https://via.placeholder.com/1024x1024")
-
-#         attachment_id = fb_bot_api.upload_attachment(image_send_message)        
-        
-#         media_template_message = TemplateSendMessage(
-#             template=MediaTemplate(
-#                 elements=[
-#                     ImageElement(
-#                         attachment_id=attachment_id,
-#                         buttons=[
-#                             PostbackAction(title="postback_1", payload="data_1"),
-#                         ]
 #                     )
 #                 ]
 #             )
@@ -278,83 +307,54 @@ def handle_text_message(event):
 #         fb_bot_api.push_message(
 #             user_id, 
 #             message=media_template_message
-#         )           
-        
-#         # by facebook
-        
-# #         media_template_message = TemplateSendMessage(
-# #             template=MediaTemplate(
-# #                 elements=[
-# #                     VideoElement(
-# #                         # see documents: 
-# #                         # https://developers.facebook.com/docs/messenger-platform/send-messages/template/media#facebook_url
-# #                         facebook_url="https://www.facebook.com/{USER_NAME}/videos/<NUMERIC_ID>/",
-# #                         buttons=[
-# #                             PostbackAction(title="postback_1", payload="data_1"),
-# #                             URLAction(
-# #                                 title="url_1",
-# #                                 url="http://example.com/1",
-# #                                 webview_height_ratio='full',
-# #                                 messenger_extensions=None,
-# #                                 fallback_url=None
-# #                             )
-# #                         ]
-# #                     )
-# #                 ]
-# #             )
-# #         )
-        
-# #         fb_bot_api.push_message(
-# #             user_id, 
-# #             message=media_template_message
-# #         )          
+#         )          
         
                 
         
         
-#     if text == "quick_reply":
+    if text == "quick_reply":
         
-#         # Text Message quick reply
-#         fb_bot_api.push_message(
-#             user_id, 
-#             message=TextSendMessage(
-#                 text = "Quick reply",
-#                 quick_replies = [
-#                     TextQuickReply(title="title1", payload="payload_1"),
-#                     TextQuickReply(title="title2", payload="payload_2")
-#                 ]          
-#             )
-#         )
+        # Text Message quick reply
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = "Quick reply",
+                quick_replies = [
+                    TextQuickReply(title="title1", payload="payload_1"),
+                    TextQuickReply(title="title2", payload="payload_2")
+                ]          
+            )
+        )
         
-#         # Attachment Message quick reply
+        # Attachment Message quick reply
         
-#         buttons_template = ButtonsTemplate(
-#             text="buttons_template",
-#             buttons= [
-#                 PostbackAction(title="action_1", payload="payload_1"),
-#                 PostbackAction(title="action_2", payload="payload_2")
-#             ])
+        buttons_template = ButtonsTemplate(
+            text="buttons_template",
+            buttons= [
+                PostbackAction(title="action_1", payload="payload_1"),
+                PostbackAction(title="action_2", payload="payload_2")
+            ])
 
-#         templateSendMessage = TemplateSendMessage(
-#             template=buttons_template,
-#             quick_replies = [
-#                 TextQuickReply(title="title1", payload="payload_1"),
-#                 TextQuickReply(title="title2", payload="payload_2")
-#             ]
-#         )       
+        templateSendMessage = TemplateSendMessage(
+            template=buttons_template,
+            quick_replies = [
+                TextQuickReply(title="title1", payload="payload_1"),
+                TextQuickReply(title="title2", payload="payload_2")
+            ]
+        )       
 
 
-#         fb_bot_api.push_message(
-#             user_id, 
-#             message=templateSendMessage
-#         )              
+        fb_bot_api.push_message(
+            user_id, 
+            message=templateSendMessage
+        )              
         
         
-#     if text.lower() == "broadcast":
+    if text.lower() == "broadcast":
         
-#         text_message = TextMessage(text = "broadcast 1")
+        text_message = TextMessage(text = "broadcast 1")
         
-#         fb_bot_api.broadcast(message = text_message)
+        fb_bot_api.broadcast(message = text_message)
     
 @handler.add(AttachmentMessageEvent, message=(ImageMessage, VideoMessage, AudioMessage))
 def handle_content_message(event):
