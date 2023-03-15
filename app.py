@@ -176,6 +176,13 @@ def handle_text_message(event):
 #         message=TextSendMessage(text=text)
 #     )
     
+    if text == "123":
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(text=text)
+        )
+    
     if text == "profile":
         
         profile = fb_bot_api.get_profile(user_id)
