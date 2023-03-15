@@ -54,8 +54,8 @@ def webhook():
 
     # endpoint for processing incoming messaging events
 
-    body = request.get_json()
-    data(body)
+    data = request.get_json()
+    log(data)
 #     handler.handle(body)
     
     
