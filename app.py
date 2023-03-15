@@ -171,10 +171,10 @@ def handle_text_message(event):
     
     user_id = event.sender.id
     
-    fb_bot_api.push_message(
-        user_id, 
-        message=TextSendMessage(text=text)
-    )
+#     fb_bot_api.push_message(
+#         user_id, 
+#         message=TextSendMessage(text=text)
+#     )
     
     if text == "profile":
         
