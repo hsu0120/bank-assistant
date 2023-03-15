@@ -237,10 +237,10 @@ def handle_text_message(event):
         # )       
 
 
-        fb_bot_api.push_message(
-            user_id, 
-            message=templateSendMessage
-        )              
+#         fb_bot_api.push_message(
+#             user_id, 
+#             message=templateSendMessage
+#         )              
         
         
     elif text.lower() == "broadcast":
