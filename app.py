@@ -215,7 +215,6 @@ def handle_text_message(event):
             message=TextSendMessage(
                 text = "Quick reply",
                 quick_replies = [
-                    PostbackAction(title="test_1", payload="reply_1"),
                     TextQuickReply(title="q1", payload="q1"),
                     TextQuickReply(title="q2", payload="q2")
                 ]          
