@@ -87,7 +87,7 @@ def handle_text_message(event):
                     TextQuickReply(title="q1", payload="q1"),
                     PostbackAction(
                         title="postback",
-                        payload="action=buy&itemid=1"
+                        payload="button_payload"
                     ),
                     URLAction(
                         title="url",
@@ -316,7 +316,7 @@ def handle_fallback_message(event):
 def handle_postback_message(event):
 
     postback_payload = event.postback.payload
-    
+    print("here")
     print(postback_payload)
 
 @handler.add(LinkingEvent)
