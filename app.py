@@ -37,6 +37,8 @@ handler = WebhookHandler()
 
 openai.api_key = CHATGPT_TOKEN
 
+data = dict()
+
 @app.route('/')
 def index():
     return "<p>Success</p>"
@@ -76,11 +78,22 @@ def handle_get_started(event):
 
 @handler.add(TextMessageEvent)
 def handle_text_message(event):
-        
+    
+    time = event.timestamp
+    
     text = event.message.text
     print(text)
     
     user_id = event.sender.id
+    
+    if user_id not in data.keys():
+        data[user_id] = dict()
+        data[user_id]['text'] = list()
+        data[user_id]['time'] = list()
+    
+    data[user_id]['text'].append(text)
+    data[user_id]['time'].append(time)
+        
 
     if text == "buttons":
         
@@ -160,6 +173,8 @@ def handle_text_message(event):
             user_id, 
             message=TextSendMessage(text=response["choices"][0]["text"])
         )
+        
+     print(data)
     
 @handler.add(QuickReplyMessageEvent) # quick reply action
 def handle_quick_reply_message(event):
