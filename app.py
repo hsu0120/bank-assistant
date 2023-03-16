@@ -77,32 +77,32 @@ def handle_text_message(event):
     
     user_id = event.sender.id
 
-#     if text == "buttons":
+    if text == "buttons":
         
-#         buttons_template_message = TemplateSendMessage(
-#             template=ButtonsTemplate(
-#                 text="Buttons template",
-#                 buttons=[
-#                     PostbackAction(
-#                         title="postback",
-#                         payload="action=buy&itemid=1"
-#                     ),
-#                     URLAction(
-#                         title="url",
-#                         url="http://example.com/",
-#                         webview_height_ratio='full',
-#                         messenger_extensions=None,
-#                         fallback_url=None
-#                     )
-#                 ]
-#             )
-#         )
+        buttons_template_message = TemplateSendMessage(
+            template=ButtonsTemplate(
+                text="Buttons template",
+                buttons=[
+                    PostbackAction(
+                        title="postback",
+                        payload="action=buy&itemid=1"
+                    ),
+                    URLAction(
+                        title="url",
+                        url="http://example.com/",
+                        webview_height_ratio='full',
+                        messenger_extensions=None,
+                        fallback_url=None
+                    )
+                ]
+            )
+        )
         
-#         fb_bot_api.push_message(
-#             user_id, 
-#             message=buttons_template_message
-#         )
-    if text == "generic":
+        fb_bot_api.push_message(
+            user_id, 
+            message=buttons_template_message
+        )
+    elif text == "generic":
         
         generic_template_message = TemplateSendMessage(
             template=GenericTemplate(
