@@ -215,6 +215,7 @@ def handle_text_message(event):
             message=TextSendMessage(
                 text = "Quick reply",
                 quick_replies = [
+                    PostbackAction(title="test_1", payload="reply_1")
                     TextQuickReply(title="q1", payload="q1"),
                     TextQuickReply(title="q2", payload="q2")
                 ]          
@@ -321,10 +322,15 @@ def handle_postback_message(event):
     
     user_id = event.sender.id
     
-    if postback_payload == "button_postback":
+    if postback_payload == "button_payload":
         fb_bot_api.push_message(
             user_id, 
             message=TextSendMessage(text="success button")
+        )
+    elif postback_payload == "reply_1":
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(text="success reply")
         )
 
 @handler.add(LinkingEvent)
