@@ -9,7 +9,7 @@ from facebookbot.models import (
     TextMessage, ImageMessage, VideoMessage, AudioMessage, 
     FileMessage, AttachmentMessage, LocationMessage, FallbackMessage,
     
-    TextMessageEvent, AttachmentMessageEvent, GetStartedEvent, 
+    TextMessageEvent, AttachmentMessageEvent, GetStartedEvent, QuickReplyMessageEvent,
     PostbackEvent, LinkingEvent, UnLinkingEvent, TextEchoMessageEvent, AttachmentEchoMessageEvent,
     
     PostbackAction, URLAction, 
@@ -257,6 +257,17 @@ def handle_text_message(event):
             message=TextSendMessage(text=text)
         )
     
+@handler.add(QuickReplyMessageEvent)
+def handle_quick_reply_message(event):
+    payload = event.message.quick_reply.payload
+    print(payload)
+    user_id = event.sender.id
+    
+    fb_bot_api.push_message(
+        user_id, 
+        message=TextSendMessage(text="success qr")
+    )
+
     
 @handler.add(AttachmentMessageEvent, message=(ImageMessage, VideoMessage, AudioMessage))
 def handle_content_message(event):
