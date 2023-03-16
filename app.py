@@ -174,7 +174,7 @@ def handle_text_message(event):
             message=TextSendMessage(text=response["choices"][0]["text"])
         )
         
-     print(data)
+    print(data)
     
 @handler.add(QuickReplyMessageEvent) # quick reply action
 def handle_quick_reply_message(event):
