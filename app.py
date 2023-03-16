@@ -316,8 +316,16 @@ def handle_fallback_message(event):
 def handle_postback_message(event):
 
     postback_payload = event.postback.payload
-    print("here")
+    
     print(postback_payload)
+    
+    user_id = event.sender.id
+    
+    if postback_payload == "button_postback":
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(text="success button")
+        )
 
 @handler.add(LinkingEvent)
 def handle_linking(event):
