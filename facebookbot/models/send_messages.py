@@ -47,7 +47,8 @@ class TextSendMessage(SendMessage):
                     self.get_or_new_from_json_dict_with_types(
                         quick_reply, {
                             'text': TextQuickReply,
-                            'location': LocationQuickReply
+                            'location': LocationQuickReply,
+                            'postback': PostbackAction
                         },
                         type_key = 'content_type'
                     )
