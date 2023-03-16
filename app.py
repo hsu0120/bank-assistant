@@ -37,8 +37,10 @@ handler = WebhookHandler()
 
 openai.api_key = CHATGPT_TOKEN
 
-file_id = openai.File.create(file=open("example.jsonl"), purpose="training", encoding="utf-8")
+file_id = openai.File.create(file=open("example.jsonl"), purpose="training")
 print(file_id)
+
+
 
 data = dict()
 
