@@ -1,4 +1,5 @@
 import os
+import openai
 from flask import Flask, request
 
 from facebookbot import (
@@ -28,10 +29,13 @@ app = Flask(__name__)
 
 ACCESS_TOKEN = os.environ.get('PAGE_TOKEN')
 VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
+CHATGPT_TOKEN = os.environ.get('CHATGPT_TOKEN')
 
 fb_bot_api = FacebookBotApi(ACCESS_TOKEN)
 
 handler = WebhookHandler()
+
+openai.api_key = CHATGPT_TOKEN
 
 @app.route('/')
 def index():
@@ -252,9 +256,16 @@ def handle_text_message(event):
         fb_bot_api.broadcast(message = text_message)
         
     else:
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=text,
+            max_tokens=128,
+            temperature=0.5,
+        )
+        
         fb_bot_api.push_message(
             user_id, 
-            message=TextSendMessage(text=text)
+            message=TextSendMessage(text=response)
         )
     
 @handler.add(QuickReplyMessageEvent)
