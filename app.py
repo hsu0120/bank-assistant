@@ -74,6 +74,7 @@ def handle_get_started(event):
 def handle_text_message(event):
         
     text = event.message.text
+    print(text)
     
     user_id = event.sender.id
 
@@ -83,6 +84,7 @@ def handle_text_message(event):
             template=ButtonsTemplate(
                 text="Buttons template",
                 buttons=[
+                    TextQuickReply(title="q1", payload="q1"),
                     PostbackAction(
                         title="postback",
                         payload="action=buy&itemid=1"
