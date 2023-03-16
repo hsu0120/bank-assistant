@@ -94,6 +94,7 @@ def handle_text_message(event):
     data[user_id]['text'].append(text)
     data[user_id]['time'].append(time)
         
+    print(data)
 
     if text == "buttons":
         
@@ -173,8 +174,6 @@ def handle_text_message(event):
             user_id, 
             message=TextSendMessage(text=response["choices"][0]["text"])
         )
-        
-    print(data)
     
 @handler.add(QuickReplyMessageEvent) # quick reply action
 def handle_quick_reply_message(event):
