@@ -265,7 +265,7 @@ def handle_text_message(event):
         
         fb_bot_api.push_message(
             user_id, 
-            message=TextSendMessage(text=response)
+            message=TextSendMessage(text=response["choices"][0]["text"])
         )
     
 @handler.add(QuickReplyMessageEvent)
