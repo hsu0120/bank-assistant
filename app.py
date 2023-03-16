@@ -37,6 +37,9 @@ handler = WebhookHandler()
 
 openai.api_key = CHATGPT_TOKEN
 
+file_id = openai.File.create(file=open("example.json"), purpose="classifications")
+print(file_id)
+
 data = dict()
 
 @app.route('/')
