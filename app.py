@@ -40,6 +40,7 @@ openai.api_key = CHATGPT_TOKEN
 # file_id = openai.File.create(file=open("example.jsonl"), purpose="classification")
 # print(file_id)
 
+print(openai.File.list())
 
 
 data = dict()
