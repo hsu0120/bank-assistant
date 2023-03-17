@@ -45,8 +45,8 @@ file = openai.File.list()['data'][0]
 print(file)
 file_id = file.id
 
-model_classification = openai.FineTune.create(training_file=file_id, model="davinci")
-print(model_classification)
+# model_classification = openai.FineTune.create(training_file=file_id, model="davinci")
+# print(model_classification)
 
 print(openai.FineTune.list())
 # fine_tuned_model = model_classification.fine_tuned_model
