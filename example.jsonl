@@ -1,6 +1,13 @@
-{"text": "what can you do", "label": "doing"}
-{"text": "trip", "label": "travel"}
-{"text": "travel", "label": "travel"}
-{"text": "play", "label": "travel"}
-{"text": "hello", "label": "doing"}
-{"text": "Are you assistant", "label": "doing"}
+{"prompt": "Which category is this statement in: 你會做什麼", "completion": "小i能做什麼"}
+{"prompt": "Which category is this statement in: 我能換多少外幣", "completion": "換外幣"}
+{"prompt": "Which category is this statement in: 即期買外幣", "completion": "換外幣"}
+{"prompt": "Which category is this statement in: 外幣提款機", "completion": "找附近外幣ATM"}
+{"prompt": "Which category is this statement in: 去玩", "completion": "旅遊"}
+{"prompt": "Which category is this statement in: 旅遊", "completion": "旅遊"}
+{"prompt": "Which category is this statement in: 玩", "completion": "旅遊"}
+{"prompt": "Which category is this statement in: what is 外匯", "completion": "外匯相關資訊"}
+{"prompt": "Which category is this statement in: 資金週轉", "completion": "房貸推薦"}
+{"prompt": "Which category is this statement in: 該辦哪張卡好", "completion": "信用卡推薦"}
+{"prompt": "Which category is this statement in: 舊屋增貸??", "completion": "房貸利率評估與試算"}
+{"prompt": "Which category is this statement in: 韓元匯率", "completion": "查匯率"}
+{"prompt": "Which category is this statement in: 日圓匯率", "completion": "查匯率"}
