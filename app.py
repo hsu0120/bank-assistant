@@ -41,17 +41,26 @@ openai.api_key = CHATGPT_TOKEN
 # print(file)
 
 # print(openai.File.list())
-# file = openai.File.list()['data'][0]
-# print(file)
-# file_id = file.id
+# files = openai.File.list()['data']
+# print(files)
+# file_id = files[0].id
 
 # model_classification = openai.FineTune.create(training_file=file_id, model="davinci")
 # print(model_classification)
 
-print(openai.FineTune.list())
-fine_tuned_model = openai.FineTune.list()['data'][0].fine_tuned_model
-print(fine_tuned_model)
+# print(openai.FineTune.list())
+models = openai.FineTune.list()['data']
+fine_tuned_model = models[0].fine_tuned_model
+# print(fine_tuned_model)
 
+
+answer = openai.Completion.create(
+  model=fine_tuned_model,
+  prompt="玩",
+  max_tokens=32,
+  temperature=0
+)
+print(answer['choices'][0]['text'])
 
 data = dict()
 
