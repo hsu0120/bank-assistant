@@ -56,7 +56,7 @@ fine_tuned_model = models[0].fine_tuned_model
 
 answer = openai.Completion.create(
   model=fine_tuned_model,
-  prompt="玩",
+  prompt="Which category is this statement in: 玩",
   max_tokens=32,
   temperature=0
 )
