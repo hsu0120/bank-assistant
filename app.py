@@ -40,17 +40,17 @@ openai.api_key = CHATGPT_TOKEN
 # file = openai.File.create(file=open("example.jsonl"), purpose="fine-tune")
 # print(file)
 
-print(openai.File.list())
-file = openai.File.list()['data'][0]
-print(file)
-file_id = file.id
+# print(openai.File.list())
+# file = openai.File.list()['data'][0]
+# print(file)
+# file_id = file.id
 
 # model_classification = openai.FineTune.create(training_file=file_id, model="davinci")
 # print(model_classification)
 
 print(openai.FineTune.list())
-# fine_tuned_model = model_classification.fine_tuned_model
-# fine_tuned_model
+fine_tuned_model = openai.FineTune.list()['data'][0].fine_tuned_model
+print(fine_tuned_model)
 
 
 data = dict()
