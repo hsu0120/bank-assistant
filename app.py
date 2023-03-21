@@ -118,12 +118,12 @@ def handle_text_message(event):
         
     print(data)
 
-    category = openai.Completion.create(
-        model=fine_tuned_model,
-        prompt='Which category is this statement in: 玩',
-        max_tokens=4,
-        temperature=0
-    )['choices'][0]['text']
+#     category = openai.Completion.create(
+#         model=fine_tuned_model,
+#         prompt='Which category is this statement in: 玩',
+#         max_tokens=4,
+#         temperature=0
+#     )['choices'][0]['text']
 
     # 外幣
     if category == '8':
