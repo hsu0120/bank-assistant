@@ -227,7 +227,7 @@ def handle_quick_reply_message(event):
             )
 
     # 匯率
-    if quick_reply_payload.startswith('currency_')
+    if quick_reply_payload.startswith('currency_'):
         if quick_reply_payload[9:] == 'US':
             send_message = currency('美元 US', 'USD')
         elif quick_reply_payload[9:] == 'CN':
