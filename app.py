@@ -278,7 +278,7 @@ def currency(dollar, en_dollar):
         buy_instant = dollar_info.find_all("div", {'class': 'BBoardRate'})[0].string
         sell_instant = dollar_info.find_all("div", {'class': 'SBoardRate'})[0].string
 
-    return '{dollar} \n\n我要賣{dollar} - 買匯價: {buy_instant} \n我要買{dollar} - 賣匯價: {sell_instant}'
+    return f'{dollar} \n\n我要賣{dollar} - 買匯價: {buy_instant} \n我要買{dollar} - 賣匯價: {sell_instant}'
 
 
 @handler.add(PostbackEvent) # button action
