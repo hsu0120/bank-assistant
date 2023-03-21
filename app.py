@@ -163,25 +163,25 @@ def handle_text_message(event):
             )
         )          
     
-    response = openai.Completion.create(
-        model='text-davinci-003',
-        prompt=text,
-        max_tokens=64,
-        temperature=0.5,
-    )
+#     response = openai.Completion.create(
+#         model='text-davinci-003',
+#         prompt=text,
+#         max_tokens=64,
+#         temperature=0.5,
+#     )
 
-    while prediction >= 0.5:
-        response = openai.Completion.create(
-            model='text-davinci-003',
-            prompt='「' + response + '」換句話說',
-            max_tokens=64,
-            temperature=0.5,
-        )
+#     while prediction >= 0.5:
+#         response = openai.Completion.create(
+#             model='text-davinci-003',
+#             prompt='「' + response + '」換句話說',
+#             max_tokens=64,
+#             temperature=0.5,
+#         )
     
-    fb_bot_api.push_message(
-        user_id, 
-        message=TextSendMessage(text=response['choices'][0]['text'])
-    )
+#     fb_bot_api.push_message(
+#         user_id, 
+#         message=TextSendMessage(text=response['choices'][0]['text'])
+#     )
 
 @handler.add(QuickReplyMessageEvent) # quick reply action
 def handle_quick_reply_message(event):
