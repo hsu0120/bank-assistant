@@ -2,3 +2,5 @@ python-messengerbot-sdk
 flask
 apiai
 openai
+requests
+bs4
