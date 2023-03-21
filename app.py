@@ -143,10 +143,9 @@ def handle_text_message(event):
 
     # 匯率
     if category == '6':
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(
-                text = '請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
+        buttons_template_message = TemplateSendMessage(
+            template=ButtonsTemplate(
+                text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
                 buttons=[
                     URLAction(
                         title='查看所有幣別匯率',
@@ -159,9 +158,14 @@ def handle_text_message(event):
                         title='個別外幣匯率',
                         payload='currency'
                     )
-                ]       
+                ] 
             )
-        )          
+        )
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=buttons_template_message
+        )
     
 #     response = openai.Completion.create(
 #         model='text-davinci-003',
@@ -223,7 +227,7 @@ def handle_quick_reply_message(event):
             )
 
     # 匯率
-    if quick_reply_payload.startswith('currency_'):
+    if quick_reply_payload.startswith('currency_')
         if quick_reply_payload[9:] == 'US':
             send_message = currency('美元 US', 'USD')
         elif quick_reply_payload[9:] == 'CN':
@@ -235,10 +239,9 @@ def handle_quick_reply_message(event):
         elif quick_reply_payload[9:] == 'EU':
             send_message = currency('歐元 EU', 'EUR')
 
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(
-                text = send_message,
+        buttons_template_message = TemplateSendMessage(
+            template=ButtonsTemplate(
+                text=send_message,
                 buttons=[
                     URLAction(
                         title='外匯走勢',
@@ -254,12 +257,17 @@ def handle_quick_reply_message(event):
                 ]       
             )
         )
-
-
-    fb_bot_api.push_message(
-        user_id, 
-        message=TextSendMessage(text='success qr')
-    )
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=buttons_template_message
+        )
+        
+    else:
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(text='success qr')
+        )
 
 def currency(dollar, en_dollar):
     r = requests.get('https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates')
