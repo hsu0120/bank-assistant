@@ -170,7 +170,7 @@ def handle_text_message(event):
         temperature=0.5,
     )
 
-    while (prediction >= 0.5):
+    while prediction >= 0.5:
         response = openai.Completion.create(
             model='text-davinci-003',
             prompt='「' + response + '」換句話說',
@@ -198,7 +198,7 @@ def handle_quick_reply_message(event):
     data[user_id]['time'].append(time)
 
     # 外幣
-    if quick_reply_payload.startswith('foreign_')
+    if quick_reply_payload.startswith('foreign_'):
         data[user_id]['status'] += 0.1
         
         if data[user_id]['status'] == 8.2:
@@ -223,7 +223,7 @@ def handle_quick_reply_message(event):
             )
 
     # 匯率
-    if quick_reply_payload.startswith('currency_')
+    if quick_reply_payload.startswith('currency_'):
         if quick_reply_payload[9:] == 'US':
             send_message = currency('美元 US', 'USD')
         elif quick_reply_payload[9:] == 'CN':
