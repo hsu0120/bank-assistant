@@ -33,10 +33,9 @@ from facebookbot.models import (
 
 app = Flask(__name__)
 
-ACCESS_TOKEN = 'EAADE26qDBaIBAGylfdmAiyPRGWv6dRAUgUMG5sZAwTdO42WNVpnoGQFOAp3xV78l6zZCaAqhoVZB1bbkBTIJ06xW2BmKaodFP7gaGwA128I3Kb08e9pN2YatPX1jp7Nzn6HuN1AMrwBp6qlvwgz87FdLUrS0tIg3dZCgVsu8FDpNfZArKqPx2ZC6Fl6UMjs6UZD'
-VERIFY_TOKEN = 'success'
-CHATGPT_TOKEN = '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'
-
+ACCESS_TOKEN = os.environ.get('PAGE_TOKEN')
+VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
+CHATGPT_TOKEN = os.environ.get('CHATGPT_TOKEN')
 fb_bot_api = FacebookBotApi(ACCESS_TOKEN)
 
 handler = WebhookHandler()
