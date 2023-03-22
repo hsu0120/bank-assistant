@@ -5,6 +5,8 @@ from flask import Flask, request
 import requests
 from bs4 import BeautifulSoup
 
+import re
+
 
 from facebookbot import (
     FacebookBotApi, WebhookHandler
@@ -31,9 +33,9 @@ from facebookbot.models import (
 
 app = Flask(__name__)
 
-ACCESS_TOKEN = os.environ.get('PAGE_TOKEN')
-VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
-CHATGPT_TOKEN = os.environ.get('CHATGPT_TOKEN')
+ACCESS_TOKEN = 'EAADE26qDBaIBAGylfdmAiyPRGWv6dRAUgUMG5sZAwTdO42WNVpnoGQFOAp3xV78l6zZCaAqhoVZB1bbkBTIJ06xW2BmKaodFP7gaGwA128I3Kb08e9pN2YatPX1jp7Nzn6HuN1AMrwBp6qlvwgz87FdLUrS0tIg3dZCgVsu8FDpNfZArKqPx2ZC6Fl6UMjs6UZD'
+VERIFY_TOKEN = 'success'
+CHATGPT_TOKEN = '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'
 
 fb_bot_api = FacebookBotApi(ACCESS_TOKEN)
 
@@ -118,19 +120,67 @@ def handle_text_message(event):
         
     print(data)
 
-#     category = openai.Completion.create(
-#         model=fine_tuned_model,
-#         prompt='Which category is this statement in: 玩',
-#         max_tokens=4,
-#         temperature=0
-#     )['choices'][0]['text']
+    # category = openai.Completion.create(
+    #     model=fine_tuned_model,
+    #     prompt='Which category is this statement in: 玩',
+    #     max_tokens=4,
+    #     temperature=0
+    # )['choices'][0]['text']
 
+    # 輸入外幣金額
+    # if data[user_id]['status'] == 8.3:
+    #     re.match('[a-zA-Z]')
+    if text == "generic":
+        
+        generic_template_message = TemplateSendMessage(
+            template=GenericTemplate(
+                elements=[
+                    GenericElement(
+                        title="GenericElement 1",
+                        image_url="https://example.com/item1.jpg",
+                        subtitle="description1",
+                        default_action=URLAction(url="http://example.com/"),
+                        buttons=[
+                            PostbackAction(title="postback_1", payload="data_1"),
+                            URLAction(
+                                title="url_1",
+                                url="http://example.com/1",
+                                webview_height_ratio='full',
+                                messenger_extensions=None,
+                                fallback_url=None
+                            )
+                        ]
+                    ),
+                    GenericElement(
+                        title="GenericElement 2",
+                        image_url="https://example.com/item2.jpg",
+                        subtitle="description2",
+                        default_action=URLAction(url="http://example.com/"),
+                        buttons=[
+                            PostbackAction(title="postback_2", payload="data_2"),
+                            URLAction(
+                                title="url_2",
+                                url="http://example.com/2",
+                                webview_height_ratio='compact',
+                                messenger_extensions=None,
+                                fallback_url=None
+                            )
+                        ]
+                    )
+                ]
+            )
+        )        
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=generic_template_message
+        )        
     # 外幣
-    if category == '8':
+    elif category == '8':
         fb_bot_api.push_message(
             user_id, 
             message=TextSendMessage(
-                text = '你要換算哪個外幣呢？',
+                text = '你要換算哪個外幣呢?',
                 quick_replies = [
                     TextQuickReply(title='美元 US', payload='foreign_US'),
                     TextQuickReply(title='人民幣 CN', payload='foreign_CN'),
@@ -142,10 +192,10 @@ def handle_text_message(event):
         )
 
     # 匯率
-    if category == '6':
+    elif category == '6':
         buttons_template_message = TemplateSendMessage(
             template=ButtonsTemplate(
-                text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
+                text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢?',
                 buttons=[
                     URLAction(
                         title='查看所有幣別匯率',
@@ -166,26 +216,43 @@ def handle_text_message(event):
             user_id, 
             message=buttons_template_message
         )
-    
-#     response = openai.Completion.create(
-#         model='text-davinci-003',
-#         prompt=text,
-#         max_tokens=64,
-#         temperature=0.5,
-#     )
 
-#     while prediction >= 0.5:
-#         response = openai.Completion.create(
-#             model='text-davinci-003',
-#             prompt='「' + response + '」換句話說',
-#             max_tokens=64,
-#             temperature=0.5,
-#         )
+    # 信用卡
+    elif category == '13':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = '請問你喜歡以下哪一種類型的卡片呢?\n我將根據你的偏好，立刻推薦適合的卡片',
+                quick_replies = [
+                    TextQuickReply(title='網購族', payload='card_web'),
+                    TextQuickReply(title='百貨購物族', payload='card_department'),
+                    TextQuickReply(title='生活達人族', payload='card_life'),
+                    TextQuickReply(title='出國旅遊族', payload='card_trip'),
+                    TextQuickReply(title='聯名卡', payload='card_signed')
+                ]          
+            )
+        )
+      
     
-#     fb_bot_api.push_message(
-#         user_id, 
-#         message=TextSendMessage(text=response['choices'][0]['text'])
-#     )
+    # response = openai.Completion.create(
+    #     model='text-davinci-003',
+    #     prompt=text,
+    #     max_tokens=64,
+    #     temperature=0.5,
+    # )
+
+    # while (prediction >= 0.5):
+    #     response = openai.Completion.create(
+    #         model='text-davinci-003',
+    #         prompt='「' + response + '」換句話說',
+    #         max_tokens=64,
+    #         temperature=0.5,
+    #     )
+    
+    # fb_bot_api.push_message(
+    #     user_id, 
+    #     message=TextSendMessage(text=response['choices'][0]['text'])
+    # )
 
 @handler.add(QuickReplyMessageEvent) # quick reply action
 def handle_quick_reply_message(event):
@@ -198,14 +265,14 @@ def handle_quick_reply_message(event):
     
     user_id = event.sender.id
 
-#     data[user_id]['conversation_log'].append(text)
-#     data[user_id]['last_time']=time
+    # data[user_id]['text'].append(text)
+    # data[user_id]['time'].append(time)
 
     # 外幣
     if quick_reply_payload.startswith('foreign_'):
         data[user_id]['status'] += 0.1
         
-        if data[user_id]['status'] == 8.2:
+        if data[user_id]['status'] == 8.1:
             payload_buy = quick_reply_payload + 'buy'
             payload_sell = quick_reply_payload + 'sell'
 
@@ -220,7 +287,7 @@ def handle_quick_reply_message(event):
                 )
             )
             
-        elif data[user_id]['status'] == 8.3:
+        elif data[user_id]['status'] == 8.2:
             fb_bot_api.push_message(
                 user_id, 
                 message=TextSendMessage(text = '你要換多少呢?')
@@ -262,7 +329,7 @@ def handle_quick_reply_message(event):
             user_id, 
             message=buttons_template_message
         )
-        
+
     else:
         fb_bot_api.push_message(
             user_id, 
@@ -305,5 +372,5 @@ def handle_postback_message(event):
         )
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 8000))
+    app.run(port=port)
