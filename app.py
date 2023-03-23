@@ -54,9 +54,9 @@ openai.api_key = CHATGPT_TOKEN
 # print(model_classification)
 
 # print(openai.FineTune.list())
-# models = openai.FineTune.list()['data']
-# fine_tuned_model = models[0].fine_tuned_model
-# print(fine_tuned_model)
+models = openai.FineTune.list()['data']
+fine_tuned_model = models[1].fine_tuned_model
+print(fine_tuned_model)
 
 def currency(dollar, en_dollar):
     r = requests.get('https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates')
