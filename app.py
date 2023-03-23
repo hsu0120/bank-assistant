@@ -176,7 +176,7 @@ def handle_text_message(event):
 
     category = openai.Completion.create(
         model=fine_tuned_model,
-        prompt='Which category is this statement in: 玩',
+        prompt=f'Which category is this statement in: {text}',
         max_tokens=4,
         temperature=0
     )['choices'][0]['text']
