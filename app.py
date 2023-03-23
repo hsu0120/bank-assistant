@@ -54,9 +54,9 @@ openai.api_key = CHATGPT_TOKEN
 # print(model_classification)
 
 # print(openai.FineTune.list())
-models = openai.FineTune.list()['data']
-fine_tuned_model = models[1].fine_tuned_model
-print(fine_tuned_model)
+# models = openai.FineTune.list()['data']
+# fine_tuned_model = models[0].fine_tuned_model
+# print(fine_tuned_model)
 
 def currency(dollar, en_dollar):
     r = requests.get('https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates')
@@ -390,13 +390,9 @@ def handle_quick_reply_message(event):
     quick_reply_payload = event.message.quick_reply.payload
     
     user_id = event.sender.id
-    
-    if user_id not in data.keys():
-        data[user_id] = dict()
-        data[user_id]['conversation_log'] = list()
-    
-    data[user_id]['conversation_log'].append(text)
-    data[user_id]['last_time'] = time
+
+    data[user_id]['text'].append(text)
+    data[user_id]['time'].append(time)
 
     # 外幣
     if quick_reply_payload.startswith('foreign_'):
@@ -422,6 +418,21 @@ def handle_quick_reply_message(event):
                 user_id, 
                 message=TextSendMessage(text = '你要換多少呢?')
             )
+    elif quick_reply_payload == 'foreign':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = '你要換算哪個外幣呢？',
+                quick_replies = [
+                    TextQuickReply(title='美元 US', payload='foreign_US'),
+                    TextQuickReply(title='人民幣 CN', payload='foreign_CN'),
+                    TextQuickReply(title='港幣 HK', payload='foreign_HK'),
+                    TextQuickReply(title='日圓 JP', payload='foreign_JP'),
+                    TextQuickReply(title='歐元 EU', payload='foreign_EU')
+                ]          
+            )
+        )
+        data[user_id]['status'] = 8
 
     # 匯率
     elif quick_reply_payload.startswith('currency_'):
@@ -460,6 +471,72 @@ def handle_quick_reply_message(event):
             message=buttons_template_message
         )
 
+    elif quick_reply_payload == 'currency':
+        buttons_template_message = TemplateSendMessage(
+            template=ButtonsTemplate(
+                text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
+                buttons=[
+                    URLAction(
+                        title='查看所有幣別匯率',
+                        url='https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates',
+                        webview_height_ratio='full',
+                        messenger_extensions=None,
+                        fallback_url=None
+                    ),
+                    PostbackAction(
+                        title='個別外幣匯率',
+                        payload='currency'
+                    )
+                ] 
+            )
+        )
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=buttons_template_message
+        )
+
+    elif quick_reply_payload == 'card':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = '請問你喜歡以下哪一種類型的卡片呢?\n我將根據你的偏好，立刻推薦適合的卡片',
+                quick_replies = [
+                    TextQuickReply(title='網購族', payload='card_web'),
+                    TextQuickReply(title='百貨購物族', payload='card_department'),
+                    TextQuickReply(title='生活達人族', payload='card_life'),
+                    TextQuickReply(title='出國旅遊族', payload='card_trip'),
+                    TextQuickReply(title='聯名卡', payload='card_signed')
+                ]          
+            )
+        )
+
+    elif quick_reply_payload == 'loan':
+        buttons_template_message = TemplateSendMessage(
+            template=ButtonsTemplate(
+                text='透過簡單15題以內的問卷，只要「3分鐘」就可以「線上」、「免費」獲得「專屬」的可貸款額度，還有專屬優惠利率，線上立即申請，享有優惠三選一方案',
+                buttons=[
+                    URLAction(
+                        title='額度利率評估',
+                        url='https://www.esunbank.com.tw/s/HouseLoan/Registration',
+                        webview_height_ratio='full',
+                        messenger_extensions=None,
+                        fallback_url=None
+                    )
+                ] 
+            )
+        )
+        
+        fb_bot_api.push_message(
+            user_id, 
+            message=buttons_template_message
+        )
+    elif quick_reply_payload == 'loan_suggestion':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(text='建議你用以下六個技巧來挑選房貸喔！\n 1. 貸款成本：4種精算利率的方法（兩段式利率、固定或機動利率、銀行的附加費用、違約金的收取）\n2. 產品多樣化：選擇能提供多樣產品的銀行\n3. 附加價值：滿足一次購足的要求\n4. 服務品質：要從小處觀察\n5. 房貸專員：專業、熱忱、效率都重要\n6. 品牌價值：優先選口碑好的銀行')
+        )
+
     else:
         fb_bot_api.push_message(
             user_id, 
@@ -492,8 +569,44 @@ def handle_postback_message(event):
     elif button_payload == 'currency_':
         currency_response(user_id)
 
+    elif button_payload == 'currency_info':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = '外匯相關問題',
+                quick_replies = [
+                    TextQuickReply(title='現在匯率多少', payload='currency'),
+                    TextQuickReply(title='能換多少外幣', payload='foreign')
+                ]         
+            )
+        )
+
     elif button_payload == 'card_':
         card_response(user_id)
+
+    elif button_payload == 'card_info':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = '信用卡相關問題',
+                quick_replies = [
+                    TextQuickReply(title='信用卡推薦', payload='card'),
+                    TextQuickReply(title='辦卡相關', payload='create')
+                ]         
+            )
+        )
+
+    elif button_payload == 'loan_info':
+        fb_bot_api.push_message(
+            user_id, 
+            message=TextSendMessage(
+                text = '房貸相關問題',
+                quick_replies = [
+                    TextQuickReply(title='我能貸多少', payload='loan'),
+                    TextQuickReply(title='該選哪個房貸', payload='loan_suggestion')
+                ]         
+            )
+        )
 
     else:
         fb_bot_api.push_message(
