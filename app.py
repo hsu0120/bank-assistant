@@ -390,9 +390,13 @@ def handle_quick_reply_message(event):
     quick_reply_payload = event.message.quick_reply.payload
     
     user_id = event.sender.id
-
-    data[user_id]['text'].append(text)
-    data[user_id]['time'].append(time)
+    
+    if user_id not in data.keys():
+        data[user_id] = dict()
+        data[user_id]['conversation_log'] = list()
+    
+    data[user_id]['conversation_log'].append(text)
+    data[user_id]['last_time'] = time
 
     # 外幣
     if quick_reply_payload.startswith('foreign_'):
