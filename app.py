@@ -96,7 +96,7 @@ def foreign_currency_amount(text):
 
 # 處理資料
 def save_data_user(user_id, text, time, u0):
-    if (user_id not in data.keys()) or (time - user_id['last_time']) > 1800:
+    if (user_id not in data.keys()) or (int(time) - int(data[user_id]['last_time'])) > 1800:
         data[user_id] = dict()
         data[user_id]['status'] = 0
         data[user_id]['conversation_log'] = list()
