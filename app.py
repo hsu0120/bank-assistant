@@ -1,11 +1,10 @@
 import os
 import openai
+import datetime
 from flask import Flask, request
 
 import requests
 from bs4 import BeautifulSoup
-
-import re
 
 from facebookbot import (
     FacebookBotApi, WebhookHandler
@@ -29,7 +28,7 @@ from facebookbot.models import (
 )
 
 
-
+# 初始化
 app = Flask(__name__)
 
 ACCESS_TOKEN = os.environ.get('PAGE_TOKEN')
@@ -42,23 +41,95 @@ handler = WebhookHandler()
 
 openai.api_key = CHATGPT_TOKEN
 
-# file = openai.File.create(file=open('example.jsonl'), purpose='fine-tune')
-# print(file)
+data = dict()
 
-# print(openai.File.list())
-# files = openai.File.list()['data']
-# print(files)
-# file_id = files[0].id
+# chatgpt 判斷
+def banking(text):
+    result = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = f'The following is a statement and the category it falls into:banking, non-banking\n\n{text}\nCategory:',
+        temperature = 0,
+        max_tokens = 6,
+        top_p = 1,
+        frequency_penalty = 0,
+        presence_penalty = 0
+    )['choices'][0]['text'].replace(' ', '')
 
-# model_classification = openai.FineTune.create(training_file=file_id, model='davinci')
-# print(model_classification)
+    return True if result == 'Banking' else False
 
-# print(openai.FineTune.list())
-models = openai.FineTune.list()['data']
-fine_tuned_model = models[1].fine_tuned_model
-print(fine_tuned_model)
+def foreign_currency(text):
+    result = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = f'Does the following statement includes currency, if yes what is the currency abbreviation in three English letters, except TWD?\n\n{text}\nCurrency:',
+        temperature = 0,
+        max_tokens = 6,
+        top_p = 1,
+        frequency_penalty = 0,
+        presence_penalty = 0
+    )['choices'][0]['text'].replace(' ', '', 1)
+    return result if result != 'No' else None
 
-def currency(dollar, en_dollar):
+def foreign_currency_transaction(text):
+    result = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = f'The following is a statement and the category it falls into: buy_cash, sell_cash, buy_foreign_currency, sell_foreign_currency\n\n{text}\nCategory:',
+        temperature = 0,
+        max_tokens = 6,
+        top_p = 1,
+        frequency_penalty = 0,
+        presence_penalty = 0
+    )['choices'][0]['text'].replace(' ', '', 1)
+    return result.lower() if result.startswith('None') else None
+
+def foreign_currency_amount(text):
+    result = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = f'Does the following statement includes both currency and amount, if yes what is the currency abbreviation in three English letters and the amount? If no, which is missing?\n\n{text}\nCurrency/Amount:',
+        temperature = 0,
+        max_tokens = 6,
+        top_p = 1,
+        frequency_penalty = 0,
+        presence_penalty = 0
+    )['choices'][0]['text'].replace(' ', '', 1)
+    return result
+
+
+# 處理資料
+def save_data_user(user_id, text, time, u0):
+    if (user_id not in data.keys()) or (time - user_id['last_time']) > 1800:
+        data[user_id] = dict()
+        data[user_id]['status'] = 0
+        data[user_id]['conversation_log'] = list()
+        data[user_id]['bert_input'] = '[CLS]'
+
+    data[user_id]['conversation_log'].append('{"role": "user", ' \
+                                             f'"content": "{text}"' \
+                                             '}')
+    data[user_id]['bert_input'] += f'{u0}{text}^'
+    data[user_id]['last_time'] = time
+
+    print(data)
+
+def save_data_assistant(user_id, response, c0, c1, c2):
+    data[user_id]['conversation_log'].append('{"role": "assistant", ' \
+                                             f'"content": "{response}"' \
+                                             '}')
+    data[user_id]['bert_input'] += f'{response}{c0}{c1}{c2}^'
+
+    print(data)
+
+# 匯率相關
+def get_exchange_rate(currency, rate):
+    r = requests.get('https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates')
+    if r.status_code == 200:
+        soup = BeautifulSoup(r.text, 'html.parser')
+        
+        dollar_info = soup.find_all('tr', {'class': currency})[0]
+        exchange_rate = dollar_info.find_all('div', {'class': rate})[0].string
+
+    return exchange_rate
+
+def get_exchange_rate_response(dollar, en_dollar):
     r = requests.get('https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates')
     if r.status_code == 200:
         soup = BeautifulSoup(r.text, 'html.parser')
@@ -72,21 +143,25 @@ def currency(dollar, en_dollar):
 
     return message, url 
 
-def currency_response(user_id):
+def exchange_rate_response(user_id):
+    response = '請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？'
+
+    save_data_assistant(user_id, response, '[C00]', '[C11]', '[C20]')
+
     buttons_template_message = TemplateSendMessage(
-        template=ButtonsTemplate(
-            text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
-            buttons=[
+        template = ButtonsTemplate(
+            text = response,
+            buttons = [
                 URLAction(
-                    title='查看所有幣別匯率',
-                    url='https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates',
-                    webview_height_ratio='full',
-                    messenger_extensions=None,
-                    fallback_url=None
+                    title = '查看所有幣別匯率',
+                    url = 'https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates',
+                    webview_height_ratio = 'full',
+                    messenger_extensions = None,
+                    fallback_url = None
                 ),
                 PostbackAction(
-                    title='個別外幣匯率',
-                    payload='currency'
+                    title = '個別外幣匯率',
+                    payload = 'exchange_rate'
                 )
             ] 
         )
@@ -94,35 +169,274 @@ def currency_response(user_id):
     
     fb_bot_api.push_message(
         user_id, 
-        message=buttons_template_message
+        message = buttons_template_message
     )
 
-def card_response(user_id):
+# 外幣相關
+def foreign_currency_response(user_id):
+    response = '你要換算哪個外幣呢？'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    fb_bot_api.push_message(
+        user_id, 
+        message = TextSendMessage(
+            text = response,
+            quick_replies = [
+                TextQuickReply(title = '美元 USD', payload = 'foreign_USD'),
+                TextQuickReply(title = '人民幣 CNY', payload = 'foreign_CNY'),
+                TextQuickReply(title = '港幣 HKD', payload = 'foreign_HKD'),
+                TextQuickReply(title = '日圓 JPY', payload = 'foreign_JPY'),
+                TextQuickReply(title = '歐元 EUR', payload = 'foreign_EUR')
+            ]          
+        )
+    )
+    data[user_id]['status'] = 8
+
+def foreign_currency_response_transaction(user_id, currency):
+    response = '請問你是要?'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    data[user_id]['status'] = 8.1
+    data[user_id]['foreign_currency'] = currency
+
+    payload_buy_cash = currency + '_buy_cash'
+    payload_sell_cash = currency + '_sell_cash'
+    payload_buy_foreign = currency + '_buy_foreign_currency'
+    payload_sell_foreign = currency + '_sell_foreign_currency'
+
     fb_bot_api.push_message(
         user_id, 
         message=TextSendMessage(
-            text = '請問你喜歡以下哪一種類型的卡片呢?\n我將根據你的偏好，立刻推薦適合的卡片',
+            text = response,
             quick_replies = [
-                TextQuickReply(title='網購族', payload='card_web'),
-                TextQuickReply(title='百貨購物族', payload='card_department'),
-                TextQuickReply(title='生活達人族', payload='card_life'),
-                TextQuickReply(title='出國旅遊族', payload='card_trip'),
-                TextQuickReply(title='聯名卡', payload='card_signed')
+                TextQuickReply(title = '買現鈔', payload = payload_buy_cash),
+                TextQuickReply(title = '賣現鈔', payload = payload_sell_cash),
+                TextQuickReply(title = '買即期外幣', payload = payload_buy_foreign),
+                TextQuickReply(title = '賣即期外幣', payload = payload_sell_foreign)
             ]          
         )
     )
 
+def foreign_currency_response_amount(user_id, transaction):
+    response = f'你要換多少呢?(請記得輸入幣別喔)\nEx: {data[user_id]['foreign_currency'][8:11]} 100 或 TWD 1000'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    data[user_id]['status'] = 8.2
+    data[user_id]['foreign_currency'] = transaction
+
+    fb_bot_api.push_message(
+        user_id, 
+        message=TextSendMessage(text = response)
+    )
+
+foreign_currency_response_end(user_id, currency, transaction, ex_currency, ex_amount):
+    if transaction == 'buy_cash':
+        exchange_rate = get_exchange_rate(currency, 'CashSBoardRate')
+    elif transaction == 'sell_cash':
+        exchange_rate = get_exchange_rate(currency, 'CashBBoardRate')
+    elif transaction == 'buy_foreign_currency':
+        exchange_rate = get_exchange_rate(currency, 'SBoardRate')
+    else:
+        exchange_rate = get_exchange_rate(currency, 'BBoardRate')
+
+    if ex_currency == 'TWD':
+        result = ex_amount * exchange_rate
+    else:
+        result = ex_amount * (1 / exchange_rate)
+        currency = 'TWD'
+
+    response = f'{ex_currency} {ex_amount} = {currency} {result}\n報價時間: {str(datetime.datetime.now()).split('.')[0]}'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
+
+    generic_template_message = TemplateSendMessage(
+        template=GenericTemplate(
+            elements=[
+                GenericElement(
+                    title='貨幣換算結果',
+                    subtitle='本匯率換算僅供參考，實際成交價依交易時間而定。',
+                    buttons=[
+                        PostbackAction(title='調整換算金額', payload='foreign_'),
+                        PostbackAction(title='換算其他外幣', payload='foreign_currency')
+                    ]
+                )
+            ]
+        )
+    )
+
+    fb_bot_api.push_message(
+        user_id, 
+        message = TextSendMessage(text = response)
+    )
+
+    fb_bot_api.push_message(
+        user_id, 
+        message = generic_template_message
+    ) 
 
 
-# category = '6'
+# 信用卡相關
+def credict_card_response(user_id):
+    response = '請問你喜歡以下哪一種類型的卡片呢? 我將根據你的偏好，立刻推薦適合的卡片'
 
-data = dict()
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    fb_bot_api.push_message(
+        user_id, 
+        message = TextSendMessage(
+            text = response,
+            quick_replies = [
+                TextQuickReply(title = '網購族', payload = 'card_web'),
+                TextQuickReply(title = '百貨購物族', payload = 'card_department'),
+                TextQuickReply(title = '生活達人族', payload = 'card_life'),
+                TextQuickReply(title = '出國旅遊族', payload = 'card_trip'),
+                TextQuickReply(title = '聯名卡', payload = 'card_signed')
+            ]          
+        )
+    )
+
+# 貸款相關
+def loan_response(user_id):
+    response = '請問你有哪個貸款的需求？'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    buttons_template_message = TemplateSendMessage(
+        template = ButtonsTemplate(
+            text = response,
+            buttons = [
+                PostbackAction(
+                    title = '我有信貸需求',
+                    payload = 'card_loan'
+                ),
+                PostbackAction(
+                    title = '我有房貸需求',
+                    payload = 'house_loan'
+                )
+            ] 
+        )
+    )
+    
+    fb_bot_api.push_message(
+        user_id, 
+        message = buttons_template_message
+    )
+
+# 其他
+def retry_response(user_id):
+    response = '你想要做什麼？'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    buttons_template_message = TemplateSendMessage(
+        template = ButtonsTemplate(
+            text = response,
+            buttons = [
+                PostbackAction(
+                    title = '我想問其他問題',
+                    payload = 'other'
+                ),
+                PostbackAction(
+                    title = '我要繼續回答',
+                    payload = 'continue'
+                )
+            ] 
+        )
+    )
+    
+    fb_bot_api.push_message(
+        user_id, 
+        message = buttons_template_message
+    )
+
+def not_understand_response(user_id):
+    response = '對不起～你的問題小i不是很清楚，可以換一個方式問，我會盡力回答您，謝謝～'
+
+    save_data_assistant(user_id, response, '[C00]', '[C11]', '[C20]')
+    
+    fb_bot_api.push_message(
+        user_id, 
+        message = TextSendMessage(text = response)
+    )
+
+    data[user_id]['status'] = 0
+
+def greeting_response(user_id):
+    response = 'Hello～歡迎問小i各種關於外匯、信用卡，以及貸款的問題喔～'
+
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+
+    generic_template_message = TemplateSendMessage(
+        template = GenericTemplate(
+            elements = [
+                GenericElement(
+                    title = '外匯',
+                    subtitle = '可以查詢匯率與換算金額唷～',
+                    buttons = [
+                        PostbackAction(title = '我要換外幣', payload = 'foreign_currency'),
+                        PostbackAction(title = '現在匯率多少', payload = 'exchange_rate'),
+                        URLAction(
+                            title = '匯率官網',
+                            url = 'https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates',
+                            webview_height_ratio = 'full',
+                            messenger_extensions = None,
+                            fallback_url = None
+                        )
+                    ]
+                ),
+                GenericElement(
+                    title = '信用卡',
+                    subtitle = '不知道要辦哪張卡嗎？',
+                    buttons = [
+                        PostbackAction(title = '哪張卡適合我', payload = 'card_info'),
+                        PostbackAction(title = '熱門卡片介紹', payload = 'card'),
+                        URLAction(
+                            title = '信用卡官網',
+                            url = 'https://www.esunbank.com.tw/bank/personal/credit-card/intro',
+                            webview_height_ratio = 'full',
+                            messenger_extensions = None,
+                            fallback_url = None
+                        )
+                    ]
+                ),
+                GenericElement(
+                    title = '貸款',
+                    subtitle = '回答一些問體，會派專員跟你聯繫～',
+                    buttons = [
+                        PostbackAction(title = '我有信貸需求', payload = 'card_loan'),
+                        PostbackAction(title = '我有房貸需求', payload = 'house_loan'),
+                        URLAction(
+                            title = '房貸官網',
+                            url = 'https://www.esunbank.com.tw/s/HouseLoan/Registration',
+                            webview_height_ratio = 'full',
+                            messenger_extensions = None,
+                            fallback_url = None
+                        )
+                    ]
+                )
+            ]
+        )
+    )        
+    
+    fb_bot_api.push_message(
+        user_id, 
+        message = TextSendMessage(text = response)
+    )
+
+    fb_bot_api.push_message(
+        user_id, 
+        message = generic_template_message
+    ) 
+
 
 @app.route('/')
 def index():
     return '<p>Success</p>'
 
-@app.route('/callback', methods=['GET'])
+@app.route('/callback', methods = ['GET'])
 def verify():
     
     if request.args.get('hub.mode') == 'subscribe' and request.args.get('hub.challenge'):
@@ -134,7 +448,7 @@ def verify():
     return 'Hello world', 200
 
 
-@app.route('/callback', methods=['POST'])
+@app.route('/callback', methods = ['POST'])
 def webhook():
 
     # endpoint for processing incoming messaging events
@@ -150,10 +464,11 @@ def handle_get_started(event):
     
     fb_bot_api.push_message(
         user_id, 
-        message=TextSendMessage(text='Welcome to this page/app...')
+        message = TextSendMessage(text = 'Welcome to this page/app...')
     )    
     
     # set welcome message   
+
 
 @handler.add(TextMessageEvent)
 def handle_text_message(event):
@@ -165,221 +480,102 @@ def handle_text_message(event):
     
     user_id = event.sender.id
     
-    if user_id not in data.keys():
-        data[user_id] = dict()
-        data[user_id]['conversation_log'] = list()
-    
-    data[user_id]['conversation_log'].append(text)
-    data[user_id]['last_time'] = time
-        
-    print(data)
+    save_data_user(user_id, text, time, '[U01]')
 
+    # assistant 有問問題
+    if data[user_id]['status'] != 0:
+
+        # 外幣
+        if data[user_id]['status'] == 8:
+            currency = foreign_currency(text)
+            if currency == None:
+                # 看是不是銀行相關的其他服務
+                continue
+
+            currency = 'foreign_' + currency
+            foreign_currency_response_transaction(user_id, currency)
+
+        elif data[user_id]['status'] == 8.1:
+            transaction = foreign_currency_transaction(text)
+            if transaction == None:
+                # 看是不是銀行相關的其他服務
+                continue
+            
+            transaction = data[user_id]['foreign_currency'] + '_' + transaction
+            foreign_currency_response_amount(user_id, transaction)
+
+        elif data[user_id]['status'] == 8.2:
+            result = foreign_currency_amount(text)
+            if (result.startswith('No')) or not (any(t.isdigit() for t in text)):
+                data[user_id]['try'] += 1
+                if data[user_id]['try'] > 1:
+                    retry_response(user_id)
+                else:
+                    foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
+                continue
+
+            result = result.replace(' ', '').split('/')
+            ex_currency, ex_amount = result[0], result[1]
+            currency, transaction = data[user_id]['foreign_currency'][8:11], data[user_id]['foreign_currency'][12:]
+            
+            if ex_currency != 'TWD' and ex_currency != currency:
+                data[user_id]['try'] += 1
+                if data[user_id]['try'] > 1:
+                    retry_response(user_id)
+                else:
+                    foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
+                continue
+
+            foreign_currency_response_end(user_id, currency, transaction, ex_currency, ex_amount)
+
+
+    # 非相關，直接回不懂
+    if not banking(text):
+        not_understand_response(user_id)
+        continue
+
+
+    # 相關，看是哪個種類
     category = openai.Completion.create(
-        model=fine_tuned_model,
-        prompt=f'Which category is this statement in: {text}',
-        max_tokens=4,
-        temperature=0
-    )['choices'][0]['text']
-
-    # if data[user_id]['status'] == 8.3:
-    #     pass
-
-
+                    model = 'text-davinci-003',
+                    prompt = 'The following is a statement and the category it falls into: ' \
+                             'greeting, credict card, foreign currency, exchange rate, loan, deposit, investment, branch' \
+                            f'\n\n{t}\nCategory: ',
+                    temperature = 0,
+                    max_tokens = 6,
+                    top_p = 1,
+                    frequency_penalty = 0,
+                    presence_penalty = 0
+                )['choices'][0]['text'].replace(' ', '')
+    
     # 外幣
-    if category.startswith('8'):
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(
-                text = '你要換算哪個外幣呢？',
-                quick_replies = [
-                    TextQuickReply(title='美元 US', payload='foreign_US'),
-                    TextQuickReply(title='人民幣 CN', payload='foreign_CN'),
-                    TextQuickReply(title='港幣 HK', payload='foreign_HK'),
-                    TextQuickReply(title='日圓 JP', payload='foreign_JP'),
-                    TextQuickReply(title='歐元 EU', payload='foreign_EU')
-                ]          
-            )
-        )
-        data[user_id]['status'] = 8
+    if category == 'ForeignCurrency':
+        foreign_currency_response(user_id)
 
     # 匯率
-    elif category.startswith('6'):
-        buttons_template_message = TemplateSendMessage(
-            template=ButtonsTemplate(
-                text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
-                buttons=[
-                    URLAction(
-                        title='查看所有幣別匯率',
-                        url='https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates',
-                        webview_height_ratio='full',
-                        messenger_extensions=None,
-                        fallback_url=None
-                    ),
-                    PostbackAction(
-                        title='個別外幣匯率',
-                        payload='currency'
-                    )
-                ] 
-            )
-        )
-        
-        fb_bot_api.push_message(
-            user_id, 
-            message=buttons_template_message
-        )
+    elif category == 'ExchangeRate':
+        exchange_rate_response(user_id)
 
     # 信用卡
-    elif category.startswith('13'):
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(
-                text = '請問你喜歡以下哪一種類型的卡片呢?\n我將根據你的偏好，立刻推薦適合的卡片',
-                quick_replies = [
-                    TextQuickReply(title='網購族', payload='card_web'),
-                    TextQuickReply(title='百貨購物族', payload='card_department'),
-                    TextQuickReply(title='生活達人族', payload='card_life'),
-                    TextQuickReply(title='出國旅遊族', payload='card_trip'),
-                    TextQuickReply(title='聯名卡', payload='card_signed')
-                ]          
-            )
-        )
-    # 打招呼
-    elif category.startswith('14'):
-
-        generic_template_message = TemplateSendMessage(
-            template=GenericTemplate(
-                elements=[
-                    GenericElement(
-                        title='最新優惠',
-                        buttons=[
-                            URLAction(
-                                title='本月精選外幣優惠',
-                                url='https://www.esunbank.com.tw/bank/personal/deposit/deposit-event',
-                                webview_height_ratio='full',
-                                messenger_extensions=None,
-                                fallback_url=None
-                            ),
-                            URLAction(
-                                title='信用卡優惠',
-                                url='https://www.esunbank.com.tw/bank/personal/credit-card/discount/shops#2',
-                                webview_height_ratio='full',
-                                messenger_extensions=None,
-                                fallback_url=None
-                            ),
-                            URLAction(
-                                title='開戶優惠',
-                                url='https://event.esunbank.com.tw/mkt/OpenAccount/marketing/index.html',
-                                webview_height_ratio='full',
-                                messenger_extensions=None,
-                                fallback_url=None
-                            )
-                        ]
-                    ),
-                    GenericElement(
-                        title='外匯',
-                        buttons=[
-                            PostbackAction(title='服務總覽', payload='currency_info'),
-                            PostbackAction(title='現在匯率多少', payload='currency_')
-                        ]
-                    ),
-                    GenericElement(
-                        title='房貸',
-                        buttons=[
-                            PostbackAction(title='服務總覽', payload='loan_info'),
-                            URLAction(
-                                title='額度利率評估',
-                                url='https://www.esunbank.com.tw/s/HouseLoan/Registration',
-                                webview_height_ratio='full',
-                                messenger_extensions=None,
-                                fallback_url=None
-                            )
-                        ]
-                    ),
-                    GenericElement(
-                        title='信用卡',
-                        buttons=[
-                            PostbackAction(title='服務總覽', payload='card_info'),
-                            PostbackAction(title='信用卡推薦', payload='card_')
-                        ]
-                    )
-                ]
-            )
-        )        
-        
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(text='Hello~歡迎問小i各種關於外匯、房貸，以及信用卡的問題喔~')
-        )
-
-        fb_bot_api.push_message(
-            user_id, 
-            message=generic_template_message
-        ) 
-
-    elif category.startswith('15'):
-        response = openai.Completion.create(
-            model='text-davinci-003',
-            prompt=text,
-            max_tokens=64,
-            temperature=0.5,
-        )
-
-        # while (prediction >= 0.5):
-        #     response = openai.Completion.create(
-        #         model='text-davinci-003',
-        #         prompt='「' + response + '」幫我換句話說',
-        #         max_tokens=64,
-        #         temperature=0.5,
-        #     )
-        
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(text=response['choices'][0]['text'])
-        )
-
-    # 房貸利率評估
-    elif category.startswith('1'):
-        buttons_template_message = TemplateSendMessage(
-            template=ButtonsTemplate(
-                text='透過簡單15題以內的問卷，只要「3分鐘」就可以「線上」、「免費」獲得「專屬」的可貸款額度，還有專屬優惠利率，線上立即申請，享有優惠三選一方案',
-                buttons=[
-                    URLAction(
-                        title='額度利率評估',
-                        url='https://www.esunbank.com.tw/s/HouseLoan/Registration',
-                        webview_height_ratio='full',
-                        messenger_extensions=None,
-                        fallback_url=None
-                    )
-                ] 
-            )
-        )
-        
-        fb_bot_api.push_message(
-            user_id, 
-            message=buttons_template_message
-        )
+    elif category == 'CredictCard':
+        credict_card_response(user_id)
     
+    # 房貸利率評估
+    elif category == 'Loan':
+        loan_response(user_id)
+
+    # 打招呼
+    elif category == 'Greeting':
+        greeting_response(user_id)
+
+    # 投資
+    elif category == 'Investment':
+        investment_response(user_id)
+
     else:
-        response = openai.Completion.create(
-            model='text-davinci-003',
-            prompt=text,
-            max_tokens=64,
-            temperature=0.5,
-        )
-
-        # while (prediction >= 0.5):
-        #     response = openai.Completion.create(
-        #         model='text-davinci-003',
-        #         prompt='「' + response + '」幫我換句話說',
-        #         max_tokens=64,
-        #         temperature=0.5,
-        #     )
+        pass
         
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(text=response['choices'][0]['text'])
-        )
-
+  
 @handler.add(QuickReplyMessageEvent) # quick reply action
 def handle_quick_reply_message(event):
 
@@ -391,69 +587,32 @@ def handle_quick_reply_message(event):
     
     user_id = event.sender.id
 
-    if user_id not in data.keys():
-        data[user_id] = dict()
-        data[user_id]['conversation_log'] = list()
-    
-    data[user_id]['conversation_log'].append(text)
-    data[user_id]['last_time'] = time
+    save_data_user(user_id, text, time, '[U00]')
 
     # 外幣
     if quick_reply_payload.startswith('foreign_'):
-        data[user_id]['status'] += 0.1
-        
-        if data[user_id]['status'] == 8.1:
-            payload_buy = quick_reply_payload + 'buy'
-            payload_sell = quick_reply_payload + 'sell'
-
-            fb_bot_api.push_message(
-                user_id, 
-                message=TextSendMessage(
-                    text = '請問你是要?',
-                    quick_replies = [
-                        TextQuickReply(title='買現鈔', payload=payload_buy),
-                        TextQuickReply(title='賣現鈔', payload=payload_sell)
-                    ]          
-                )
-            )
+        if data[user_id]['status'] == 8:
+            foreign_currency_response_transaction(user_id, quick_reply_payload)
             
-        elif data[user_id]['status'] == 8.2:
-            fb_bot_api.push_message(
-                user_id, 
-                message=TextSendMessage(text = '你要換多少呢?')
-            )
-    elif quick_reply_payload == 'foreign':
-        fb_bot_api.push_message(
-            user_id, 
-            message=TextSendMessage(
-                text = '你要換算哪個外幣呢？',
-                quick_replies = [
-                    TextQuickReply(title='美元 US', payload='foreign_US'),
-                    TextQuickReply(title='人民幣 CN', payload='foreign_CN'),
-                    TextQuickReply(title='港幣 HK', payload='foreign_HK'),
-                    TextQuickReply(title='日圓 JP', payload='foreign_JP'),
-                    TextQuickReply(title='歐元 EU', payload='foreign_EU')
-                ]          
-            )
-        )
-        data[user_id]['status'] = 8
+        elif data[user_id]['status'] == 8.1:
+            foreign_currency_response_amount(user_id, quick_reply_payload)
 
     # 匯率
     elif quick_reply_payload.startswith('currency_'):
-        if quick_reply_payload[9:] == 'US':
-            send_message, send_url = currency('美元 US', 'USD')
-        elif quick_reply_payload[9:] == 'CN':
-            send_message, send_url = currency('人民幣 CN', 'CNY')
-        elif quick_reply_payload[9:] == 'HK':
-            send_message, send_url = currency('港幣 HK', 'HKD')
-        elif quick_reply_payload[9:] == 'JP':
-            send_message, send_url = currency('日圓 JP', 'JPY')
-        elif quick_reply_payload[9:] == 'EU':
-            send_message, send_url = currency('歐元 EU', 'EUR')
+        if quick_reply_payload[9:] == 'USD':
+            response, send_url = get_exchange_rate_response('美元 USD', 'USD')
+        elif quick_reply_payload[9:] == 'CNY':
+            response, send_url = get_exchange_rate_response('人民幣 CNY', 'CNY')
+        elif quick_reply_payload[9:] == 'HKD':
+            response, send_url = get_exchange_rate_response('港幣 HKD', 'HKD')
+        elif quick_reply_payload[9:] == 'JPY':
+            response, send_url = get_exchange_rate_response('日圓 JPY', 'JPY')
+        elif quick_reply_payload[9:] == 'EUR':
+            response, send_url = get_exchange_rate_response('歐元 EUR', 'EUR')
 
         buttons_template_message = TemplateSendMessage(
             template=ButtonsTemplate(
-                text=send_message,
+                text=response,
                 buttons=[
                     URLAction(
                         title='外匯走勢',
@@ -464,7 +623,7 @@ def handle_quick_reply_message(event):
                     ),
                     PostbackAction(
                         title='查其他外幣匯率',
-                        payload='currency'
+                        payload='exchange_rate'
                     )
                 ]       
             )
@@ -475,7 +634,7 @@ def handle_quick_reply_message(event):
             message=buttons_template_message
         )
 
-    elif quick_reply_payload == 'currency':
+    elif quick_reply_payload == 'exchange_rate':
         buttons_template_message = TemplateSendMessage(
             template=ButtonsTemplate(
                 text='請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？',
@@ -489,7 +648,7 @@ def handle_quick_reply_message(event):
                     ),
                     PostbackAction(
                         title='個別外幣匯率',
-                        payload='currency'
+                        payload='exchange_rate'
                     )
                 ] 
             )
@@ -547,39 +706,45 @@ def handle_quick_reply_message(event):
             message=TextSendMessage(text='success qr')
         )
 
+
 @handler.add(PostbackEvent) # button action
 def handle_postback_message(event):
 
+    text = event.postback.title
 
     button_payload = event.postback.payload
     
     user_id = event.sender.id
+
+    time = event.timestamp / 1000
+
+    save_data_user(user_id, text, time, '[U00]')
     
-    if button_payload == 'currency':
+    if button_payload == 'exchange_rate':
         fb_bot_api.push_message(
             user_id, 
             message=TextSendMessage(
                 text = '你要查詢哪個外幣呢？',
                 quick_replies = [
-                    TextQuickReply(title='美元 US', payload='currency_US'),
-                    TextQuickReply(title='人民幣 CN', payload='currency_CN'),
-                    TextQuickReply(title='港幣 HK', payload='currency_HK'),
-                    TextQuickReply(title='日圓 JP', payload='currency_JP'),
-                    TextQuickReply(title='歐元 EU', payload='currency_EU')
+                    TextQuickReply(title='美元 US', payload='exchange_rate_US'),
+                    TextQuickReply(title='人民幣 CN', payload='exchange_rate_CN'),
+                    TextQuickReply(title='港幣 HK', payload='exchange_rate_HK'),
+                    TextQuickReply(title='日圓 JP', payload='exchange_rate_JP'),
+                    TextQuickReply(title='歐元 EU', payload='exchange_rate_EU')
                 ]         
             )
         )
 
-    elif button_payload == 'currency_':
+    elif button_payload == 'exchange_rate_':
         currency_response(user_id)
 
-    elif button_payload == 'currency_info':
+    elif button_payload == 'exchange_rate_info':
         fb_bot_api.push_message(
             user_id, 
             message=TextSendMessage(
                 text = '外匯相關問題',
                 quick_replies = [
-                    TextQuickReply(title='現在匯率多少', payload='currency'),
+                    TextQuickReply(title='現在匯率多少', payload='exchange_rate'),
                     TextQuickReply(title='能換多少外幣', payload='foreign')
                 ]         
             )
@@ -617,6 +782,7 @@ def handle_postback_message(event):
             user_id, 
             message=TextSendMessage(text='success btn')
         )
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
