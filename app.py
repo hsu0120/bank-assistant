@@ -249,7 +249,8 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
         result = ex_amount * (1 / exchange_rate)
         currency = 'TWD'
 
-    response = f'{ex_currency} {ex_amount} = {currency} {result}\n報價時間: {str(datetime.datetime.now()).split('.')[0]}'
+    date = str(datetime.datetime.now()).split('.')[0]
+    response = f'{ex_currency} {ex_amount} = {currency} {result}\n報價時間: {date}'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
