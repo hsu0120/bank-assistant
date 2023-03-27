@@ -492,7 +492,7 @@ def handle_text_message(event):
             currency = foreign_currency(text)
             if currency == None:
                 # 看是不是銀行相關的其他服務
-                continue
+                pass
 
             currency = 'foreign_' + currency
             foreign_currency_response_transaction(user_id, currency)
@@ -501,7 +501,7 @@ def handle_text_message(event):
             transaction = foreign_currency_transaction(text)
             if transaction == None:
                 # 看是不是銀行相關的其他服務
-                continue
+                pass
             
             transaction = data[user_id]['foreign_currency'] + '_' + transaction
             foreign_currency_response_amount(user_id, transaction)
@@ -514,68 +514,66 @@ def handle_text_message(event):
                     retry_response(user_id)
                 else:
                     foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
-                continue
-
-            result = result.replace(' ', '').split('/')
-            ex_currency, ex_amount = result[0], result[1]
-            currency, transaction = data[user_id]['foreign_currency'][8:11], data[user_id]['foreign_currency'][12:]
-            
-            if ex_currency != 'TWD' and ex_currency != currency:
-                data[user_id]['try'] += 1
-                if data[user_id]['try'] > 1:
-                    retry_response(user_id)
+            else:
+                result = result.replace(' ', '').split('/')
+                ex_currency, ex_amount = result[0], result[1]
+                currency, transaction = data[user_id]['foreign_currency'][8:11], data[user_id]['foreign_currency'][12:]
+                
+                if ex_currency != 'TWD' and ex_currency != currency:
+                    data[user_id]['try'] += 1
+                    if data[user_id]['try'] > 1:
+                        retry_response(user_id)
+                    else:
+                        foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
                 else:
-                    foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
-                continue
-
-            foreign_currency_response_end(user_id, currency, transaction, ex_currency, ex_amount)
-
-
-    # 非相關，直接回不懂
-    if not banking(text):
-        not_understand_response(user_id)
-        continue
-
-
-    # 相關，看是哪個種類
-    category = openai.Completion.create(
-                    model = 'text-davinci-003',
-                    prompt = 'The following is a statement and the category it falls into: ' \
-                             'greeting, credict card, foreign currency, exchange rate, loan, deposit, investment, branch' \
-                            f'\n\n{t}\nCategory: ',
-                    temperature = 0,
-                    max_tokens = 6,
-                    top_p = 1,
-                    frequency_penalty = 0,
-                    presence_penalty = 0
-                )['choices'][0]['text'].replace(' ', '')
-    
-    # 外幣
-    if category == 'ForeignCurrency':
-        foreign_currency_response(user_id)
-
-    # 匯率
-    elif category == 'ExchangeRate':
-        exchange_rate_response(user_id)
-
-    # 信用卡
-    elif category == 'CredictCard':
-        credict_card_response(user_id)
-    
-    # 房貸利率評估
-    elif category == 'Loan':
-        loan_response(user_id)
-
-    # 打招呼
-    elif category == 'Greeting':
-        greeting_response(user_id)
-
-    # 投資
-    elif category == 'Investment':
-        investment_response(user_id)
+                    foreign_currency_response_end(user_id, currency, transaction, ex_currency, ex_amount)
 
     else:
-        pass
+        # 非相關，直接回不懂
+        if not banking(text):
+            not_understand_response(user_id)
+        
+
+        else:
+            # 相關，看是哪個種類
+            category = openai.Completion.create(
+                            model = 'text-davinci-003',
+                            prompt = 'The following is a statement and the category it falls into: ' \
+                                     'greeting, credict card, foreign currency, exchange rate, loan, deposit, investment, branch' \
+                                    f'\n\n{t}\nCategory: ',
+                            temperature = 0,
+                            max_tokens = 6,
+                            top_p = 1,
+                            frequency_penalty = 0,
+                            presence_penalty = 0
+                        )['choices'][0]['text'].replace(' ', '')
+            
+            # 外幣
+            if category == 'ForeignCurrency':
+                foreign_currency_response(user_id)
+
+            # 匯率
+            elif category == 'ExchangeRate':
+                exchange_rate_response(user_id)
+
+            # 信用卡
+            elif category == 'CredictCard':
+                credict_card_response(user_id)
+            
+            # 房貸利率評估
+            elif category == 'Loan':
+                loan_response(user_id)
+
+            # 打招呼
+            elif category == 'Greeting':
+                greeting_response(user_id)
+
+            # 投資
+            elif category == 'Investment':
+                investment_response(user_id)
+
+            else:
+                pass
         
   
 @handler.add(QuickReplyMessageEvent) # quick reply action
