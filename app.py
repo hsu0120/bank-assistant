@@ -502,7 +502,7 @@ def handle_text_message(event):
             if transaction == None:
                 # 看是不是銀行相關的其他服務
                 pass
-            
+            data[user_id]['try'] = 0
             transaction = data[user_id]['foreign_currency'] + '_' + transaction
             foreign_currency_response_amount(user_id, transaction)
 
@@ -595,7 +595,9 @@ def handle_quick_reply_message(event):
             foreign_currency_response_transaction(user_id, quick_reply_payload)
             
         elif data[user_id]['status'] == 8.1:
+            data[user_id]['try'] = 0
             foreign_currency_response_amount(user_id, quick_reply_payload)
+
 
     # 匯率
     elif quick_reply_payload.startswith('currency_'):
