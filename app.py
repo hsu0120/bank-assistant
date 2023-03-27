@@ -91,6 +91,7 @@ def foreign_currency_amount(text):
         frequency_penalty = 0,
         presence_penalty = 0
     )['choices'][0]['text'].replace(' ', '', 1)
+    print(result)
     return result
 
 
