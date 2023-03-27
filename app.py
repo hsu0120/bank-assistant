@@ -173,6 +173,8 @@ def exchange_rate_response(user_id):
         message = buttons_template_message
     )
 
+    data[user_id]['status'] = 0
+
 # 外幣相關
 def foreign_currency_response(user_id):
     response = '你要換算哪個外幣呢？'
