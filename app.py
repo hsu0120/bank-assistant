@@ -220,7 +220,8 @@ def foreign_currency_response_transaction(user_id, currency):
     )
 
 def foreign_currency_response_amount(user_id, transaction):
-    response = f'你要換多少呢?(請記得輸入幣別喔)\nEx: {data[user_id]['foreign_currency'][8:11]} 100 或 TWD 1000'
+    currency = data[user_id]['foreign_currency'][8:11]
+    response = f'你要換多少呢?(請記得輸入幣別喔)\nEx: {currency} 100 或 TWD 1000'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
@@ -232,7 +233,7 @@ def foreign_currency_response_amount(user_id, transaction):
         message=TextSendMessage(text = response)
     )
 
-foreign_currency_response_end(user_id, currency, transaction, ex_currency, ex_amount):
+def foreign_currency_response_end(user_id, currency, transaction, ex_currency, ex_amount):
     if transaction == 'buy_cash':
         exchange_rate = get_exchange_rate(currency, 'CashSBoardRate')
     elif transaction == 'sell_cash':
