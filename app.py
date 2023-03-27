@@ -540,7 +540,7 @@ def handle_text_message(event):
                             model = 'text-davinci-003',
                             prompt = 'The following is a statement and the category it falls into: ' \
                                      'greeting, credict card, foreign currency, exchange rate, loan, deposit, investment, branch' \
-                                    f'\n\n{t}\nCategory: ',
+                                    f'\n\n{text}\nCategory: ',
                             temperature = 0,
                             max_tokens = 6,
                             top_p = 1,
