@@ -564,7 +564,7 @@ def house_loan_response_purpose(user_id):
         )
     )
 
-def house_loan_response_own(user_id)
+def house_loan_response_own(user_id):
     response = '你要申請貸款的房屋所有權人'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
@@ -583,7 +583,7 @@ def house_loan_response_own(user_id)
         )
     )
 
-def house_loan_response_address(user_id)
+def house_loan_response_address(user_id):
     if data[user_id]['try'] == 0:
         response = '麻煩告訴我要評估的房屋所在地址，要有縣市和明確的路段喲！'
     else:
