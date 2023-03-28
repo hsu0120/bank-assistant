@@ -148,13 +148,15 @@ def generate_card_information(text):
 
     result = list()
     for a in ans:
+        if a == '\n':
+            continue
         tmp = a.replace(' ：', '：').replace('： ', '：').split('：')
         print(tmp)
-        result.append(GenericElement(title = tmp[0][3:], 
-                                     subtitle = tmp[1]
-                                     ))
+        # result.append(GenericElement(title = tmp[0][3:], 
+        #                              subtitle = tmp[1]
+        #                              ))
     print(result)
-    return result
+    return ans
 
 
 # 處理資料
@@ -421,7 +423,7 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
                     title='貨幣換算結果',
                     subtitle='本匯率換算僅供參考，實際成交價依交易時間而定。',
                     buttons=[
-                        PostbackAction(title='調整換算金額', payload='foreign_'),
+                        PostbackAction(title='調整換算金額', payload='foreign_change'),
                         PostbackAction(title='換算其他外幣', payload='foreign_currency')
                     ]
                 )
@@ -471,20 +473,24 @@ def credit_card_response_end(user_id, text):
 
     generic_element = generate_card_information(text)
 
-    generic_template_message = TemplateSendMessage(
-        template = GenericTemplate(
-            elements = generic_element
-        )
-    )
+    # generic_template_message = TemplateSendMessage(
+    #     template = GenericTemplate(
+    #         elements = generic_element
+    #     )
+    # )
 
     fb_bot_api.push_message(
         user_id, 
         message = TextSendMessage(text = response)
     )
 
+    # fb_bot_api.push_message(
+    #     user_id, 
+    #     message = generic_template_message
+    # )
     fb_bot_api.push_message(
         user_id, 
-        message = generic_template_message
+        message = TextSendMessage(text = generic_element)
     )
 
   
@@ -1181,7 +1187,7 @@ def handle_postback_message(event):
     else:
         fb_bot_api.push_message(
             user_id, 
-            message=TextSendMessage(text='success btn')
+            message = TextSendMessage(text = 'success btn')
         )
 
 
