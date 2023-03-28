@@ -144,11 +144,11 @@ def generate_card_information(text):
             {"role": "user", "content": f"提供{text}最多五張玉山信用卡，用'卡名:還有15字的介紹'這個格式回覆"}
         ]
     )
-    ans = response.to_dict()['choices'][0]['message']['content'].split('\n').replace(' :', ':').replace(': ', ':')
+    ans = response.to_dict()['choices'][0]['message']['content'].split('\n')
 
     result = list()
     for a in ans:
-        tmp = a.split(':')
+        tmp = a.replace(' :', ':').replace(': ', ':').split(':')
         result.append(GenericElement(title = tmp[0][3:], 
                                      subtitle = tmp[1]
                                      ))
@@ -203,7 +203,7 @@ def get_exchange_rate_response(currency):
         
         dollar_info = soup.find_all('tr', {'class': currency})[0]
 
-        chinese = dollar_info.find_all('div', {'class': 'title-item'})[1].string.replace(' ', '')
+        chinese = dollar_info.find_all('div', {'class': 'title-item'})[1].string.replace(' ', '').replace('\n', '')
 
         buy_rate = dollar_info.find_all('div', {'class': 'BBoardRate'})[0].string
         sell_rate = dollar_info.find_all('div', {'class': 'SBoardRate'})[0].string
