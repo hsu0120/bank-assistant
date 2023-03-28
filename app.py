@@ -63,7 +63,7 @@ def banking_category(text):
     result = openai.Completion.create(
         model = 'text-davinci-003',
         prompt = 'The following is a statement and the category it falls into: ' \
-                 'greeting, credict card, foreign currency, exchange rate, loan, house loan, card loan, deposit, investment, branch' \
+                 'greeting, credit card, foreign currency, exchange rate, loan, house loan, card loan, deposit, investment, branch' \
                 f'\n\n{text}\nCategory: ',
         temperature = 0,
         max_tokens = 6,
@@ -440,7 +440,7 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
 
 
 # 信用卡相關
-def credict_card_response(user_id):
+def credit_card_response(user_id):
     response = '請問你喜歡以下哪一種類型的卡片呢? 我將根據你的偏好，立刻推薦適合的卡片'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
@@ -452,16 +452,16 @@ def credict_card_response(user_id):
         message = TextSendMessage(
             text = response,
             quick_replies = [
-                TextQuickReply(title = '網購族', payload = 'credict_card_web'),
-                TextQuickReply(title = '百貨購物族', payload = 'credict_card_department'),
-                TextQuickReply(title = '生活達人族', payload = 'credict_card_life'),
-                TextQuickReply(title = '出國旅遊族', payload = 'credict_card_trip'),
-                TextQuickReply(title = '聯名卡', payload = 'credict_card_signed')
+                TextQuickReply(title = '網購族', payload = 'credit_card_web'),
+                TextQuickReply(title = '百貨購物族', payload = 'credit_card_department'),
+                TextQuickReply(title = '生活達人族', payload = 'credit_card_life'),
+                TextQuickReply(title = '出國旅遊族', payload = 'credit_card_trip'),
+                TextQuickReply(title = '聯名卡', payload = 'credit_card_signed')
             ]          
         )
     )
 
-def credict_card_response_end(user_id, text):
+def credit_card_response_end(user_id, text):
     response = '以下是你可能有興趣的信用卡資訊'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
@@ -773,8 +773,8 @@ def greeting_response(user_id):
                     title = '信用卡',
                     subtitle = '不知道要辦哪張卡嗎？',
                     buttons = [
-                        PostbackAction(title = '哪張卡適合我', payload = 'credict_card'),
-                        PostbackAction(title = '熱門卡片介紹', payload = 'hot_credict_card'),
+                        PostbackAction(title = '哪張卡適合我', payload = 'credit_card'),
+                        PostbackAction(title = '熱門卡片介紹', payload = 'hot_credit_card'),
                         URLAction(
                             title = '信用卡官網',
                             url = 'https://www.esunbank.com.tw/bank/personal/credit-card/intro',
@@ -1042,8 +1042,8 @@ def handle_text_message(event):
                 exchange_rate_response(user_id)
 
             # 信用卡
-            elif category == 'CredictCard':
-                credict_card_response(user_id)
+            elif category == 'CreditCard':
+                credit_card_response(user_id)
             
             # 貸款
             elif category == 'Loan':
@@ -1096,8 +1096,8 @@ def handle_quick_reply_message(event):
         exchange_rate_response_end(user_id, quick_reply_payload[14:])
 
     # 信用卡
-    elif quick_reply_payload.startswith('credict_card_'):
-        credict_card_response_end(user_id, text)
+    elif quick_reply_payload.startswith('credit_card_'):
+        credit_card_response_end(user_id, text)
 
     # 房貸
     elif quick_reply_payload.startswith('house_loan_'):
@@ -1160,10 +1160,10 @@ def handle_postback_message(event):
         exchange_rate_response_currency(user_id)
 
     elif button_payload == 'credit_card':
-        credict_card_response(user_id)
+        credit_card_response(user_id)
 
-    elif button_payload == 'hot_credict_card':
-        credict_card_response_end(user_id, '熱門信用卡')
+    elif button_payload == 'hot_credit_card':
+        credit_card_response_end(user_id, '熱門信用卡')
 
     elif button_payload == 'house_loan':
         house_loan_response(user_id)
