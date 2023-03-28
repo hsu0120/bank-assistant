@@ -141,7 +141,7 @@ def generate_card_information(text):
       model="gpt-3.5-turbo",
       messages=[
             {"role": "system", "content": "You are a bank assistant."},
-            {"role": "user", "content": f"提供{text}最多五張玉山信用卡，用'卡名:還有15字的介紹'這個格式回覆"}
+            {"role": "user", "content": f"提供{text}最多五張玉山信用卡，用'卡名:15字的介紹'這個格式回覆"}
         ]
     )
     ans = response.to_dict()['choices'][0]['message']['content'].split('\n')
@@ -149,6 +149,7 @@ def generate_card_information(text):
     result = list()
     for a in ans:
         tmp = a.replace(' :', ':').replace(': ', ':').split(':')
+        print(tmp)
         result.append(GenericElement(title = tmp[0][3:], 
                                      subtitle = tmp[1]
                                      ))
