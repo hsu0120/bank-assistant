@@ -148,7 +148,7 @@ def generate_card_information(text):
 
     result = list()
     for a in ans:
-        tmp = a.replace(' :', ':').replace(': ', ':').split(':')
+        tmp = a.replace(' ：', '：').replace('： ', '：').split('：')
         print(tmp)
         result.append(GenericElement(title = tmp[0][3:], 
                                      subtitle = tmp[1]
