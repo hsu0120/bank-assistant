@@ -472,7 +472,7 @@ def credit_card_response_end(user_id, text):
 
     generic_template_message = TemplateSendMessage(
         template = GenericTemplate(
-            elements = result
+            elements = generic_element
         )
     )
 
