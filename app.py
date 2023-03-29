@@ -67,7 +67,7 @@ def banking_category(text):
     result = openai.Completion.create(
         model = 'text-davinci-003',
         prompt = 'The following is a statement and the category it falls into: ' \
-                 'greeting, credit card, foreign currency, exchange rate, loan, house loan, card loan, deposit, investment, branch' \
+                 'greeting, credit card, foreign currency, exchange rate, card loan, house loan, loan, deposit, investment, branch' \
                 f'\n\n{text}\nCategory: ',
         temperature = 0,
         max_tokens = 6,
@@ -163,6 +163,17 @@ def generate_card_information(text):
     # print(result)
     return ans
 
+def generate_response(text):
+    response = openai.ChatCompletion.create(
+      model="gpt-3.5-turbo",
+      messages=[
+            {"role": "system", "content": "You are a bank assistant."},
+            {"role": "user", "content": f"提供玉山銀行相關的回答：{text}"}
+        ]
+    )
+    ans = response.to_dict()['choices'][0]['message']['content']
+
+    return ans
 
 # 處理資料
 def save_to_database(user_id):
@@ -882,8 +893,8 @@ def continue_dialog_response(user_id):
     elif data['last_status'] == 0:
         not_understand_response(user_id)
     
-def investment_response(user_id):
-    response = '投資還沒用好 哈哈'
+def other_response(user_id, text):
+    response = generate_response(text)
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
     
@@ -1105,11 +1116,8 @@ def handle_text_message(event):
                 greeting_response(user_id)
 
             # 投資
-            elif category == 'Investment':
-                investment_response(user_id)
-
             else:
-                pass
+                other_response(user_id, text)
         
   
 @handler.add(QuickReplyMessageEvent) # quick reply action
