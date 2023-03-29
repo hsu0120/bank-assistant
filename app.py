@@ -944,6 +944,8 @@ def handle_text_message(event):
     
     save_data_user(user_id, text, time, '[U01]')
 
+    print(data)
+
     # assistant 有問問題
     if data['status'] != 0:
 
