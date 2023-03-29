@@ -1,12 +1,12 @@
 import os
+import re
 import openai
 import datetime
+from firebase import firebase
 from flask import Flask, request
 
 import requests
 from bs4 import BeautifulSoup
-
-import re
 
 from facebookbot import (
     FacebookBotApi, WebhookHandler
@@ -36,12 +36,15 @@ app = Flask(__name__)
 ACCESS_TOKEN = os.environ.get('PAGE_TOKEN')
 VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 CHATGPT_TOKEN = os.environ.get('CHATGPT_TOKEN')
+DB_URL = os.environ.get('DB_URL')
 
 fb_bot_api = FacebookBotApi(ACCESS_TOKEN)
 
 handler = WebhookHandler()
 
 openai.api_key = CHATGPT_TOKEN
+
+database = firebase.FirebaseApplication(DB_URL, None)
 
 data = dict()
 
@@ -161,30 +164,50 @@ def generate_card_information(text):
 
 
 # 處理資料
+def save_to_database(user_id):
+    database.put(f'/user/{user_id}', 'status', data['status'])
+    database.put(f'/user/{user_id}', 'last_time', data['last_time'])
+    database.put(f'/user/{user_id}', 'bert_input', data['bert_input'])
+    database.put(f'/user/{user_id}', 'conversation_log', data['conversation_log'])
+    database.put(f'/user/{user_id}', 'try', data['try'])
+    database.put(f'/user/{user_id}', 'last_status', data['last_status'])
+    database.put(f'/user/{user_id}', 'foreign_currency', data['foreign_currency'])
+
+def reset_data():
+    data = dict()
+    data['status'] = 0
+    data['last_time'] = 0
+    data['conversation_log'] = list()
+    data['bert_input'] = '[CLS]'
+    data['try'] = 0
+    data['last_status'] = 0
+    data['foreign_currency'] = ''
+
+    return data
+
 def save_data_user(user_id, text, time, u0):
-    if (user_id not in data.keys()) or (int(time) - int(data[user_id]['last_time'])) > 1800:
-        data[user_id] = dict()
-        data[user_id]['status'] = 0
-        data[user_id]['conversation_log'] = list()
-        data[user_id]['bert_input'] = '[CLS]'
-        data[user_id]['try'] = 0
-        data[user_id]['last_status'] = 0
-        data[user_id]['foreign_currency'] = ''
+    data = database.get('/user', f'{user_id}')
+    if data == None:
+        data = reset_data()
+    else:
+        if time - data['last_time'] > 1800:
+            data = reset_data()
 
-
-    data[user_id]['conversation_log'].append('{"role": "user", ' \
-                                             f'"content": "{text}"' \
-                                             '}')
-    data[user_id]['bert_input'] += f'{u0}{text}^'
-    data[user_id]['last_time'] = time
+    data['conversation_log'].append('{"role": "user", ' \
+                                     f'"content": "{text}"' \
+                                     '}')
+    data['bert_input'] += f'{u0}{text}^'
+    data['last_time'] = time
 
     print(data)
 
 def save_data_assistant(user_id, response, c0, c1, c2):
-    data[user_id]['conversation_log'].append('{"role": "assistant", ' \
+    data['conversation_log'].append('{"role": "assistant", ' \
                                              f'"content": "{response}"' \
                                              '}')
-    data[user_id]['bert_input'] += f'{response}{c0}{c1}{c2}^'
+    data['bert_input'] += f'{response}{c0}{c1}{c2}^'
+
+    save_to_database(user_id)
 
     print(data)
 
@@ -221,10 +244,10 @@ def get_exchange_rate_response(currency):
 # 匯率相關
 def exchange_rate_response(user_id):
     response = '請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？'
+    
+    data['status'] = 6
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
-    
-    data[user_id]['status'] = 6
 
     buttons_template_message = TemplateSendMessage(
         template = ButtonsTemplate(
@@ -253,9 +276,9 @@ def exchange_rate_response(user_id):
 def exchange_rate_response_currency(user_id):
     response = '你要查詢哪個外幣呢？'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 6.1
 
-    data[user_id]['status'] = 6.1
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -273,10 +296,10 @@ def exchange_rate_response_currency(user_id):
 
 def exchange_rate_response_all_currency(user_id):
     response = '一次瀏覽多種外幣別，可以直接按下面的按鈕'
+    
+    data['status'] = 0
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
-    
-    data[user_id]['status'] = 0
 
     buttons_template_message = TemplateSendMessage(
         template = ButtonsTemplate(
@@ -301,9 +324,9 @@ def exchange_rate_response_all_currency(user_id):
 def exchange_rate_response_end(user_id, currency):
     response, send_url = get_exchange_rate_response(currency)
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
+    data['status'] = 0
 
-    data[user_id]['status'] = 0
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
     buttons_template_message = TemplateSendMessage(
         template=ButtonsTemplate(
@@ -333,10 +356,10 @@ def exchange_rate_response_end(user_id, currency):
 # 外幣相關
 def foreign_currency_response(user_id):
     response = '你要換算哪個外幣呢？'
+    
+    data['status'] = 8
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
-    
-    data[user_id]['status'] = 8
 
     fb_bot_api.push_message(
         user_id, 
@@ -355,10 +378,10 @@ def foreign_currency_response(user_id):
 def foreign_currency_response_transaction(user_id, currency):
     response = '請問你是要?'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 8.1
+    data['foreign_currency'] = currency
 
-    data[user_id]['status'] = 8.1
-    data[user_id]['foreign_currency'] = currency
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     payload_buy_cash = currency + '_buy_cash'
     payload_sell_cash = currency + '_sell_cash'
@@ -379,13 +402,13 @@ def foreign_currency_response_transaction(user_id, currency):
     )
 
 def foreign_currency_response_amount(user_id, transaction):
-    currency = data[user_id]['foreign_currency'][8:11]
+    currency = data['foreign_currency'][8:11]
     response = f'你要換多少呢?(請記得輸入幣別喔)\nEx: {currency} 100 或 TWD 1000'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 8.2
+    data['foreign_currency'] = transaction
 
-    data[user_id]['status'] = 8.2
-    data[user_id]['foreign_currency'] = transaction
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -403,19 +426,19 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
         exchange_rate = get_exchange_rate(currency, 'BBoardRate')
 
     if ex_currency == 'TWD':
-        result = round(float(ex_amount) * float(exchange_rate), 0)
+        result = round(float(ex_amount) * float(exchange_rate), 2)
     else:
-        result = round(float(ex_amount) * (1/ float(exchange_rate)), 0)
+        result = round(float(ex_amount) * (1/ float(exchange_rate)), 2)
         currency = 'TWD'
 
     date = str(datetime.datetime.now()).split('.')[0]
     response = f'{ex_currency} {ex_amount} = {currency} {result}\n報價時間: {date}'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
+    data['status'] = 0
+    data['try'] = 0
+    data['foreign_currency'] = ''
 
-    data[user_id]['status'] = 0
-    data[user_id]['try'] = 0
-    data[user_id]['foreign_currency'] = ''
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
     generic_template_message = TemplateSendMessage(
         template=GenericTemplate(
@@ -446,10 +469,10 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
 # 信用卡相關
 def credit_card_response(user_id):
     response = '請問你喜歡以下哪一種類型的卡片呢? 我將根據你的偏好，立刻推薦適合的卡片'
+    
+    data['status'] = 13
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
-    
-    data[user_id]['status'] = 13
 
     fb_bot_api.push_message(
         user_id, 
@@ -468,9 +491,9 @@ def credit_card_response(user_id):
 def credit_card_response_end(user_id, text):
     response = '以下是你可能有興趣的信用卡資訊'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
+    data['status'] = 0
 
-    data[user_id]['status'] = 0
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
     generic_element = generate_card_information(text)
 
@@ -525,9 +548,9 @@ def loan_response(user_id):
 def house_loan_response(user_id):
     response = '你想要申請'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 2
 
-    data[user_id]['status'] = 2
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -544,9 +567,9 @@ def house_loan_response(user_id):
 def house_loan_response_amount(user_id):
     response = '想要貸多少金額呢？（以萬爲單位）\nEX: 300萬，請輸入300'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 2.1
 
-    data[user_id]['status'] = 2.1
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -556,9 +579,9 @@ def house_loan_response_amount(user_id):
 def house_loan_response_purpose(user_id):
     response = '你的貸款資金用途'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 2.2
 
-    data[user_id]['status'] = 2.2
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -575,9 +598,9 @@ def house_loan_response_purpose(user_id):
 def house_loan_response_own(user_id):
     response = '你要申請貸款的房屋所有權人'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 2.3
 
-    data[user_id]['status'] = 2.3
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -592,14 +615,14 @@ def house_loan_response_own(user_id):
     )
 
 def house_loan_response_address(user_id):
-    if data[user_id]['try'] == 0:
+    if data['try'] == 0:
         response = '麻煩告訴我要評估的房屋所在地址，要有縣市和明確的路段喲！'
     else:
         response = '您的住址可能缺少了:「縣」或「市」「路」或「街」「號」，請提供完整的住址，完整的住址至少要有「縣」或「市」，「路」或「街」，「號」，例如：台北市民生東路三段115號'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 2.4
 
-    data[user_id]['status'] = 2.4
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -609,9 +632,9 @@ def house_loan_response_address(user_id):
 def card_loan_response(user_id):
     response = '你的職業是什麼？'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 3
 
-    data[user_id]['status'] = 3
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -629,9 +652,9 @@ def card_loan_response(user_id):
 def card_loan_response_salary(user_id):
     response = '你的年收入大概是多少？'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 3.1
 
-    data[user_id]['status'] = 3.1
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -653,9 +676,9 @@ def card_loan_response_salary(user_id):
 def card_loan_response_card(user_id):
     response = '你有任何一家銀行的信用卡？'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 3.2
 
-    data[user_id]['status'] = 3.2
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -671,9 +694,9 @@ def card_loan_response_card(user_id):
 def card_loan_response_owe_money(user_id):
     response = '你是否還有信用卡分期或循環未還？小提醒：要包含所有銀行唷！'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['status'] = 3.3
 
-    data[user_id]['status'] = 3.3
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -687,10 +710,10 @@ def card_loan_response_owe_money(user_id):
     )
 
 def loan_response_phone(user_id):
-    if data[user_id]['try'] == 0:
+    if data['try'] == 0:
         response = '已把您的需求跟專員說了～\n幫我留下常用的聯絡電話，專員會再主動聯絡您～'
-        if data[user_id]['status'] != 2.5 and data[user_id]['status'] != 3.4:
-            data[user_id]['status'] += 0.1
+        if data['status'] != 2.5 and data['status'] != 3.4:
+            data['status'] += 0.1
     else:
         response = '您的電話有錯誤，請再檢查一下'
 
@@ -704,9 +727,9 @@ def loan_response_phone(user_id):
 def loan_response_end(user_id):
     response = '感謝你，專員將於一個工作天內與你聯繫～'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
+    data['status'] = 0
 
-    data[user_id]['status'] = 0
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
     fb_bot_api.push_message(
         user_id, 
@@ -717,11 +740,11 @@ def loan_response_end(user_id):
 def retry_response(user_id):
     response = '你想要做什麼？'
 
-    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    data['try'] = 0
+    data['last_status'] = data['status']
+    data['status'] = 0
 
-    data[user_id]['try'] = 0
-    data[user_id]['last_status'] = data[user_id]['status']
-    data[user_id]['status'] = 0
+    save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
     buttons_template_message = TemplateSendMessage(
         template = ButtonsTemplate(
@@ -844,20 +867,20 @@ def start_new_dialog_response(user_id):
     )
 
 def continue_dialog_response(user_id):
-    if data[user_id]['last_status'] == 8.2:
-        foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
+    if data['last_status'] == 8.2:
+        foreign_currency_response_amount(user_id, data['foreign_currency'])
 
-    elif data[user_id]['last_status'] == 2.1:
+    elif data['last_status'] == 2.1:
         house_loan_response_amount(user_id)
 
-    elif data[user_id]['last_status'] == 2.4:
+    elif data['last_status'] == 2.4:
         house_loan_response_address(user_id)
 
-    elif data[user_id]['last_status'] == 2.5 or data[user_id]['last_status'] == 3.4:
-        data[user_id]['status'] = data[user_id]['last_status']
+    elif data['last_status'] == 2.5 or data['last_status'] == 3.4:
+        data['status'] = data['last_status']
         loan_response_phone(user_id)
 
-    elif data[user_id]['last_status'] == 0:
+    elif data['last_status'] == 0:
         not_understand_response(user_id)
     
 def investment_response(user_id):
@@ -922,10 +945,10 @@ def handle_text_message(event):
     save_data_user(user_id, text, time, '[U01]')
 
     # assistant 有問問題
-    if data[user_id]['status'] != 0:
+    if data['status'] != 0:
 
         # 外幣
-        if data[user_id]['status'] == 8:
+        if data['status'] == 8:
             currency = foreign_currency(text)
             if currency == None:
                 # 看是不是銀行相關的其他服務
@@ -934,40 +957,40 @@ def handle_text_message(event):
                 currency = 'foreign_' + currency
                 foreign_currency_response_transaction(user_id, currency)
 
-        elif data[user_id]['status'] == 8.1:
+        elif data['status'] == 8.1:
             transaction = foreign_currency_transaction(text)
             if transaction == None:
                 # 看是不是銀行相關的其他服務
                 pass
             else:
-                transaction = data[user_id]['foreign_currency'] + '_' + transaction
+                transaction = data['foreign_currency'] + '_' + transaction
                 foreign_currency_response_amount(user_id, transaction)
 
-        elif data[user_id]['status'] == 8.2:
+        elif data['status'] == 8.2:
             result = foreign_currency_amount(text)
             if len(result) != 2:
-                data[user_id]['try'] += 1
-                if data[user_id]['try'] > 1:
+                data['try'] += 1
+                if data['try'] > 1:
                     retry_response(user_id)
                 else:
-                    foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
+                    foreign_currency_response_amount(user_id, data['foreign_currency'])
             else:
-                currency, transaction = data[user_id]['foreign_currency'][8:11], data[user_id]['foreign_currency'][12:]
+                currency, transaction = data['foreign_currency'][8:11], data['foreign_currency'][12:]
                 print(currency, transaction)
                 if result[0] != 'TWD' and result[0] != currency:
-                    data[user_id]['try'] += 1
-                    if data[user_id]['try'] > 1:
+                    data['try'] += 1
+                    if data['try'] > 1:
                         retry_response(user_id)
                     else:
-                        foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
+                        foreign_currency_response_amount(user_id, data['foreign_currency'])
                 else:
                     foreign_currency_response_end(user_id, currency, transaction, result[0], result[1])
 
         # 匯率
-        elif data[user_id]['status'] == 6:
+        elif data['status'] == 6:
             way = exchange_rate_way(text)
             if way == None:
-                data[user_id]['status'] = 0
+                data['status'] = 0
                 # 看是不是銀行相關的其他服務
                 pass
             elif way == 'all_exchange_rate':
@@ -975,7 +998,7 @@ def handle_text_message(event):
             else:
                 exchange_rate_response_currency(user_id)
         
-        elif data[user_id]['status'] == 6.1:
+        elif data['status'] == 6.1:
             currency = foreign_currency(text)
             if currency == None:
                 # 看是不是銀行相關的其他服務
@@ -984,60 +1007,60 @@ def handle_text_message(event):
                 exchange_rate_response_end(user_id, currency)
 
         # 房貸
-        elif data[user_id]['status'] == 2:
-            data[user_id]['try'] = 0
+        elif data['status'] == 2:
+            data['try'] = 0
             house_loan_response_amount(user_id)
         
-        elif data[user_id]['status'] == 2.1:
+        elif data['status'] == 2.1:
             try:
                 int(text)
                 house_loan_response_purpose(user_id)
             except:
-                data[user_id]['try'] += 1
-                if data[user_id]['try'] > 1:
+                data['try'] += 1
+                if data['try'] > 1:
                     retry_response(user_id)
                 else:
                     house_loan_response_amount(user_id)
 
-        elif data[user_id]['status'] == 2.2:
+        elif data['status'] == 2.2:
             house_loan_response_own(user_id)
 
-        elif data[user_id]['status'] == 2.3:
-            data[user_id]['try'] = 0
+        elif data['status'] == 2.3:
+            data['try'] = 0
             house_loan_response_address(user_id)
 
-        elif data[user_id]['status'] == 2.4:
+        elif data['status'] == 2.4:
             if not house_loan_address(text):
-                data[user_id]['try'] += 1
-                if data[user_id]['try'] > 1:
+                data['try'] += 1
+                if data['try'] > 1:
                     retry_response(user_id)
                 else:
                     house_loan_response_address(user_id)
             else:
-                data[user_id]['try'] = 0
+                data['try'] = 0
                 loan_response_phone(user_id)
 
         # 信貸
-        elif data[user_id]['status'] == 3:
+        elif data['status'] == 3:
             card_loan_response_salary(text)
 
-        elif data[user_id]['status'] == 3.1:
+        elif data['status'] == 3.1:
             card_loan_response_card(text)
 
-        elif data[user_id]['status'] == 3.2:
+        elif data['status'] == 3.2:
             card_loan_response_owe_money(text)
 
-        elif data[user_id]['status'] == 3.3:
-            data[user_id]['try'] = 0
+        elif data['status'] == 3.3:
+            data['try'] = 0
             loan_response_phone(user_id)
 
         # 貸款總結
-        elif data[user_id]['status'] == 2.5 or data[user_id]['status'] == 3.4:
+        elif data['status'] == 2.5 or data['status'] == 3.4:
             if re.match(r'09\d{8}', text) or re.match(r'09\d{2}-\d{3}-\d{3}', text):
                 loan_response_end(user_id)
             else:
-                data[user_id]['try'] += 1
-                if data[user_id]['try'] > 1:
+                data['try'] += 1
+                if data['try'] > 1:
                     retry_response(user_id)
                 else:
                     loan_response_phone(user_id)
@@ -1103,11 +1126,11 @@ def handle_quick_reply_message(event):
 
     # 外幣
     if quick_reply_payload.startswith('foreign_'):
-        if data[user_id]['status'] == 8:
+        if data['status'] == 8:
             foreign_currency_response_transaction(user_id, quick_reply_payload)
             
-        elif data[user_id]['status'] == 8.1:
-            data[user_id]['try'] = 0
+        elif data['status'] == 8.1:
+            data['try'] = 0
             foreign_currency_response_amount(user_id, quick_reply_payload)
 
     # 匯率
@@ -1120,35 +1143,35 @@ def handle_quick_reply_message(event):
 
     # 房貸
     elif quick_reply_payload.startswith('house_loan_'):
-        if data[user_id]['status'] == 2:
-            data[user_id]['try'] = 0
+        if data['status'] == 2:
+            data['try'] = 0
             house_loan_response_amount(user_id)
 
-        elif data[user_id]['status'] == 2.2:
+        elif data['status'] == 2.2:
             house_loan_response_own(user_id)
 
-        elif data[user_id]['status'] == 2.3:
-            data[user_id]['try'] = 0
+        elif data['status'] == 2.3:
+            data['try'] = 0
             house_loan_response_address(user_id)
 
     # 信貸
     elif quick_reply_payload.startswith('card_loan_'):
-        if data[user_id]['status'] == 3:
+        if data['status'] == 3:
             card_loan_response_salary(user_id)
 
-        elif data[user_id]['status'] == 3.1:
+        elif data['status'] == 3.1:
             card_loan_response_card(user_id)
 
-        elif data[user_id]['status'] == 3.2:
+        elif data['status'] == 3.2:
             if quick_reply_payload[10:] == 'no':
-                data[user_id]['try'] = 0
-                data[user_id]['status'] = 3.3
+                data['try'] = 0
+                data['status'] = 3.3
                 loan_response_phone(user_id)
             else:
                 card_loan_response_owe_money(user_id)
 
-        elif data[user_id]['status'] == 3.3:
-            data[user_id]['try'] = 0
+        elif data['status'] == 3.3:
+            data['try'] = 0
             loan_response_phone(user_id)
 
     else:
