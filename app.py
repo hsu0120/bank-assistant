@@ -135,7 +135,7 @@ def house_loan_address(text):
     )['choices'][0]['text'].replace(' ', '')
     print(result)
 
-    return True if result.startswith('No') else False
+    return True if not result.startswith('No') else False
 
 def generate_card_information(text):
     response = openai.ChatCompletion.create(
@@ -689,7 +689,8 @@ def card_loan_response_owe_money(user_id):
 def loan_response_phone(user_id):
     if data[user_id]['try'] == 0:
         response = '已把您的需求跟專員說了～\n幫我留下常用的聯絡電話，專員會再主動聯絡您～'
-        data[user_id]['status'] += 0.1
+        if data[user_id]['status'] != 2.5 and data[user_id]['status'] != 3.4:
+            data[user_id]['status'] += 0.1
     else:
         response = '您的電話有錯誤，請再檢查一下'
 
@@ -845,6 +846,17 @@ def start_new_dialog_response(user_id):
 def continue_dialog_response(user_id):
     if data[user_id]['last_status'] == 8.2:
         foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
+
+    elif date[user_id]['last_status'] == 2.1:
+        house_loan_response_amount(user_id)
+
+    elif data[user_id]['last_status'] == 2.4:
+        house_loan_response_address(user_id)
+
+    elif data[user_id]['last_status'] == 2.5 or data[user_id]['last_status'] == 3.4:
+        data[user_id]['status'] = data[user_id]['last_status']
+        loan_response_phone(user_id)
+
     elif data[user_id]['last_status'] == 0:
         not_understand_response(user_id)
     
@@ -1128,7 +1140,12 @@ def handle_quick_reply_message(event):
             card_loan_response_card(user_id)
 
         elif data[user_id]['status'] == 3.2:
-            card_loan_response_owe_money(user_id)
+            if quick_reply_payload[10:] == 'no':
+                data[user_id]['try'] = 0
+                date[user_id]['status'] = 3.3
+                loan_response_phone(user_id)
+            else:
+                card_loan_response_owe_money(user_id)
 
         elif data[user_id]['status'] == 3.3:
             data[user_id]['try'] = 0
