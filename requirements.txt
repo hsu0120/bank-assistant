@@ -4,3 +4,4 @@ apiai
 openai
 requests
 bs4
+firebase
