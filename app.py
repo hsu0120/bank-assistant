@@ -61,6 +61,8 @@ def banking(text):
         presence_penalty = 0
     )['choices'][0]['text'].replace(' ', '')
 
+    print(result)
+
     return True if result == 'Banking' else False
 
 def banking_category(text):
@@ -168,7 +170,7 @@ def generate_response(text):
       model="gpt-3.5-turbo",
       messages=[
             {"role": "system", "content": "You are a bank assistant."},
-            {"role": "user", "content": f"提供玉山銀行相關的回答：{text}"}
+            {"role": "user", "content": f"提供玉山銀行20字相關的回答：{text}"}
         ]
     )
     ans = response.to_dict()['choices'][0]['message']['content']
@@ -1082,7 +1084,6 @@ def handle_text_message(event):
         if not banking(text):
             not_understand_response(user_id)
         
-
         else:
             # 相關，看是哪個種類
             category = banking_category(text)
