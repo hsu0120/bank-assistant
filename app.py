@@ -176,7 +176,7 @@ def save_to_database(user_id):
 def set_data(status, last_time, conversation_log, bert_input, try_, last_status, foreign_currency):
     data['status'] = status
     data['last_time'] = last_time
-    data['conversation_log'] = list()
+    data['conversation_log'] = conversation_log
     data['bert_input'] = bert_input
     data['try'] = try_
     data['last_status'] = last_status
@@ -187,7 +187,7 @@ def save_data_user(user_id, text, time, u0):
     if data_tmp == None:
         set_data(0, 0, list(), '[CLS}', 0, 0, '')
     else:
-        set_data(data['status'], data['last_time'], data['conversation_log'], data['bert_input'], data['try'], data['last_status'], data['foreign_currency'])
+        set_data(data_tmp['status'], data_tmp['last_time'], data_tmp['conversation_log'], data_tmp['bert_input'], data_tmp['try'], data_tmp['last_status'], data_tmp['foreign_currency'])
         if time - data['last_time'] > 1800:
             set_data(0, 0, list(), '[CLS}', 0, 0, '')
 
