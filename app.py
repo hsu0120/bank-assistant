@@ -847,7 +847,7 @@ def continue_dialog_response(user_id):
     if data[user_id]['last_status'] == 8.2:
         foreign_currency_response_amount(user_id, data[user_id]['foreign_currency'])
 
-    elif date[user_id]['last_status'] == 2.1:
+    elif data[user_id]['last_status'] == 2.1:
         house_loan_response_amount(user_id)
 
     elif data[user_id]['last_status'] == 2.4:
