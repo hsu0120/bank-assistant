@@ -133,6 +133,7 @@ def house_loan_address(text):
         frequency_penalty = 0,
         presence_penalty = 0
     )['choices'][0]['text'].replace(' ', '')
+    print(result)
 
     return True if result.startswith('No') else False
 
@@ -688,12 +689,11 @@ def card_loan_response_owe_money(user_id):
 def loan_response_phone(user_id):
     if data[user_id]['try'] == 0:
         response = '已把您的需求跟專員說了～\n幫我留下常用的聯絡電話，專員會再主動聯絡您～'
+        data[user_id]['status'] += 0.1
     else:
         response = '您的電話有錯誤，請再檢查一下'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
-
-    data[user_id]['status'] += 0.1
 
     fb_bot_api.push_message(
         user_id, 
