@@ -46,6 +46,7 @@ openai.api_key = CHATGPT_TOKEN
 
 database = firebase.FirebaseApplication(DB_URL, None)
 
+data_init = dict({'status': 0, 'last_time': 0, 'conversation_log': [], 'bert_input': '[CLS}', 'try': 0, 'last_status': 0, 'foreign_currency': ''})
 data = dict()
 
 # chatgpt 判斷
@@ -173,23 +174,23 @@ def save_to_database(user_id):
     database.put(f'/user/{user_id}', 'last_status', data['last_status'])
     database.put(f'/user/{user_id}', 'foreign_currency', data['foreign_currency'])
 
-def reset_data():
-    data['status'] = 0
-    data['last_time'] = 0
-    data['conversation_log'] = list()
-    data['bert_input'] = '[CLS]'
-    data['try'] = 0
-    data['last_status'] = 0
-    data['foreign_currency'] = ''
+def set_data(d_dict):
+    data['status'] = d_dict['status']
+    data['last_time'] = d_dict['last_time']
+    data['conversation_log'] = d_dict['conversation_log']
+    data['bert_input'] = d_dict['bert_input']
+    data['try'] = d_dict['try']
+    data['last_status'] = d_dict['last_status']
+    data['foreign_currency'] = d_dict['foreign_currency']
 
 def save_data_user(user_id, text, time, u0):
     data_tmp = database.get('/user', f'{user_id}')
     if data_tmp == None:
-        reset_data()
+        set_data(data_init)
     else:
-        data = data_tmp.copy()
+        set_data(data_tmp)
         if time - data['last_time'] > 1800:
-            reset_data()
+            set_data(data_init)
 
     data['conversation_log'].append('{"role": "user", ' \
                                      f'"content": "{text}"' \
