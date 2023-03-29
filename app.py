@@ -1142,7 +1142,7 @@ def handle_quick_reply_message(event):
         elif data[user_id]['status'] == 3.2:
             if quick_reply_payload[10:] == 'no':
                 data[user_id]['try'] = 0
-                date[user_id]['status'] = 3.3
+                data[user_id]['status'] = 3.3
                 loan_response_phone(user_id)
             else:
                 card_loan_response_owe_money(user_id)
