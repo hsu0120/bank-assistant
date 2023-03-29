@@ -134,7 +134,7 @@ def house_loan_address(text):
         presence_penalty = 0
     )['choices'][0]['text'].replace(' ', '')
 
-    return True if result == 'No' else False
+    return True if result.startswith('No') else False
 
 def generate_card_information(text):
     response = openai.ChatCompletion.create(
