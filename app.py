@@ -173,29 +173,29 @@ def save_to_database(user_id):
     database.put(f'/user/{user_id}', 'last_status', data['last_status'])
     database.put(f'/user/{user_id}', 'foreign_currency', data['foreign_currency'])
 
-def set_data(status, last_time, conversation_log, bert_input, try_, last_status, foreign_currency):
-    data['status'] = status
-    data['last_time'] = last_time
-    data['conversation_log'] = conversation_log
-    data['bert_input'] = bert_input
-    data['try'] = try_
-    data['last_status'] = last_status
-    data['foreign_currency'] = foreign_currency
+def reset_data():
+    data['status'] = 0
+    data['last_time'] = 0
+    data['conversation_log'] = list()
+    data['bert_input'] = '[CLS]'
+    data['try'] = 0
+    data['last_status'] = 0
+    data['foreign_currency'] = ''
 
 def save_data_user(user_id, text, time, u0):
     data_tmp = database.get('/user', f'{user_id}')
     if data_tmp == None:
-        set_data(0, 0, list(), '[CLS}', 0, 0, '')
+        reset_data()
     else:
-        set_data(data_tmp['status'], data_tmp['last_time'], data_tmp['conversation_log'], data_tmp['bert_input'], data_tmp['try'], data_tmp['last_status'], data_tmp['foreign_currency'])
+        data = data_tmp.copy()
         if time - data['last_time'] > 1800:
-            set_data(0, 0, list(), '[CLS}', 0, 0, '')
+            reset_data()
 
     data['conversation_log'].append('{"role": "user", ' \
                                      f'"content": "{text}"' \
                                      '}')
     data['bert_input'] += f'{u0}{text}^'
-    data['last_time'] = time
+    data['last_time'] = int(time)
 
     print(data)
 
