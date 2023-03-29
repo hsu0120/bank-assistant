@@ -173,25 +173,23 @@ def save_to_database(user_id):
     database.put(f'/user/{user_id}', 'last_status', data['last_status'])
     database.put(f'/user/{user_id}', 'foreign_currency', data['foreign_currency'])
 
-def reset_data():
-    data = dict()
-    data['status'] = 0
-    data['last_time'] = 0
+def set_data(status, last_time, conversation_log, bert_input, try_, last_status, foreign_currency):
+    data['status'] = status
+    data['last_time'] = last_time
     data['conversation_log'] = list()
-    data['bert_input'] = '[CLS]'
-    data['try'] = 0
-    data['last_status'] = 0
-    data['foreign_currency'] = ''
-
-    return data
+    data['bert_input'] = bert_input
+    data['try'] = try_
+    data['last_status'] = last_status
+    data['foreign_currency'] = foreign_currency
 
 def save_data_user(user_id, text, time, u0):
-    data = database.get('/user', f'{user_id}')
-    if data == None:
-        data = reset_data()
+    data_tmp = database.get('/user', f'{user_id}')
+    if data_tmp == None:
+        set_data(0, 0, list(), '[CLS}', 0, 0, '')
     else:
+        set_data(data['status'], data['last_time'], data['conversation_log'], data['bert_input'], data['try'], data['last_status'], data['foreign_currency'])
         if time - data['last_time'] > 1800:
-            data = reset_data()
+            set_data(0, 0, list(), '[CLS}', 0, 0, '')
 
     data['conversation_log'].append('{"role": "user", ' \
                                      f'"content": "{text}"' \
