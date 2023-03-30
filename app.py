@@ -218,9 +218,10 @@ def save_data_user(user_id, text, time, u0):
     if data_tmp == None:
         set_data(data_init)
     else:
-        set_data(data_tmp)
-        if int(time) - data['last_time'] > 1800:
+        if int(time) - data_tmp['last_time'] > 1800:
             set_data(data_init)
+        else:
+            set_data(data_tmp)
 
     data['conversation_log'].append('{"role": "user", ' \
                                      f'"content": "{text}"' \
