@@ -191,7 +191,7 @@ def save_to_database(user_id):
     database.put(f'/user/{user_id}', 'last_time', data['last_time'])
 
     if len(data['bert_input']) > 21:
-        data['bert_input'] = data['bert_input'][0] + data['bert_input'][-20:]
+        data['bert_input'] = [data['bert_input'][0]] + data['bert_input'][-20:]
     database.put(f'/user/{user_id}', 'bert_input', data['bert_input'])
     
     if len(data['conversation_log']) > 20:
