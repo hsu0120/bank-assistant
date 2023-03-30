@@ -60,7 +60,7 @@ data = dict()
 def banking(text):
     result = openai.Completion.create(
         model = 'text-davinci-003',
-        prompt=f'The following is a statement and the category it falls into: greeting, finance, banking, non-banking\n\n{t}\nCategory:',
+        prompt=f'The following is a statement and the category it falls into: greeting, finance, banking, non-banking\n\n{text}\nCategory:',
         temperature = 0,
         max_tokens = 6,
         top_p = 1,
