@@ -70,7 +70,7 @@ def banking(text):
 
     print(result)
 
-    return True if result != 'Non-banking' else: False
+    return True if result != 'Non-banking' else False
 
 def banking_category(text):
     result = openai.Completion.create(
