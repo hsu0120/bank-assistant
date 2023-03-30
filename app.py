@@ -46,14 +46,21 @@ openai.api_key = CHATGPT_TOKEN
 
 database = firebase.FirebaseApplication(DB_URL, None)
 
-data_init = dict({'status': 0, 'last_time': 0, 'conversation_log': [], 'bert_input': '[CLS}', 'try': 0, 'last_status': 0, 'foreign_currency': ''})
+data_init = dict({'status': 0,
+                  'last_time': 0, 
+                  'conversation_log': [], 
+                  'bert_input': ['[CLS]'], 
+                  'try': 0, 
+                  'last_status': 0, 
+                  'foreign_currency': '', 
+                  'last_foreign_currency': ''})
 data = dict()
 
 # chatgpt 判斷
 def banking(text):
     result = openai.Completion.create(
         model = 'text-davinci-003',
-        prompt = f'The following is a statement and the category it falls into:banking, non-banking\n\n{text}\nCategory:',
+        prompt=f'The following is a statement and the category it falls into: greeting, finance, banking, non-banking\n\n{t}\nCategory:',
         temperature = 0,
         max_tokens = 6,
         top_p = 1,
@@ -63,7 +70,7 @@ def banking(text):
 
     print(result)
 
-    return True if result == 'Banking' else False
+    return True if result != 'Non-banking' else: False
 
 def banking_category(text):
     result = openai.Completion.create(
@@ -177,15 +184,24 @@ def generate_response(text):
 
     return ans
 
+
 # 處理資料
 def save_to_database(user_id):
     database.put(f'/user/{user_id}', 'status', data['status'])
     database.put(f'/user/{user_id}', 'last_time', data['last_time'])
+
+    if len(data['bert_input']) > 21:
+        data['bert_input'] = data['bert_input'][0] + data['bert_input'][-20:]
     database.put(f'/user/{user_id}', 'bert_input', data['bert_input'])
+    
+    if len(data['conversation_log']) > 20:
+        data['conversation_log'] = data['conversation_log'][-20:]
     database.put(f'/user/{user_id}', 'conversation_log', data['conversation_log'])
+
     database.put(f'/user/{user_id}', 'try', data['try'])
     database.put(f'/user/{user_id}', 'last_status', data['last_status'])
     database.put(f'/user/{user_id}', 'foreign_currency', data['foreign_currency'])
+    database.put(f'/user/{user_id}', 'last_foreign_currency', data['last_foreign_currency'])
 
 def set_data(d_dict):
     data['status'] = d_dict['status']
@@ -195,6 +211,7 @@ def set_data(d_dict):
     data['try'] = d_dict['try']
     data['last_status'] = d_dict['last_status']
     data['foreign_currency'] = d_dict['foreign_currency']
+    data['last_foreign_currency'] = d_dict['last_foreign_currency']
 
 def save_data_user(user_id, text, time, u0):
     data_tmp = database.get('/user', f'{user_id}')
@@ -202,13 +219,13 @@ def save_data_user(user_id, text, time, u0):
         set_data(data_init)
     else:
         set_data(data_tmp)
-        if time - data['last_time'] > 1800:
+        if int(time) - data['last_time'] > 1800:
             set_data(data_init)
 
     data['conversation_log'].append('{"role": "user", ' \
                                      f'"content": "{text}"' \
                                      '}')
-    data['bert_input'] += f'{u0}{text}^'
+    data['bert_input'].append(f'{u0}{text}^')
     data['last_time'] = int(time)
 
     print(data)
@@ -217,7 +234,7 @@ def save_data_assistant(user_id, response, c0, c1, c2):
     data['conversation_log'].append('{"role": "assistant", ' \
                                              f'"content": "{response}"' \
                                              '}')
-    data['bert_input'] += f'{response}{c0}{c1}{c2}^'
+    data['bert_input'].append(f'{response}{c0}{c1}{c2}^')
 
     save_to_database(user_id)
 
@@ -370,6 +387,7 @@ def foreign_currency_response(user_id):
     response = '你要換算哪個外幣呢？'
     
     data['status'] = 8
+    data['last_foreign_currency'] = ''
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
 
@@ -449,6 +467,7 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
     data['status'] = 0
     data['try'] = 0
     data['foreign_currency'] = ''
+    data['last_foreign_currency'] = ''
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
@@ -740,6 +759,7 @@ def loan_response_end(user_id):
     response = '感謝你，專員將於一個工作天內與你聯繫～'
 
     data['status'] = 0
+    date['try'] = 0
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C21]')
 
@@ -1209,6 +1229,10 @@ def handle_postback_message(event):
 
     elif button_payload == 'foreign_currency':
         foreign_currency_response(user_id)
+
+    elif button_payload == 'foreign_change':
+        data['foreign_currency'] = data['last_foreign_currency']
+        foreign_currency_response_amount(user_id)
 
     elif button_payload == 'exchange_rate':
         exchange_rate_response(user_id)
