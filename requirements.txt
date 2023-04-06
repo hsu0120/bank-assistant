@@ -1,3 +1,4 @@
+-f https://download.pytorch.org/whl/torch_stable.html
 python-messengerbot-sdk
 flask
 apiai
@@ -5,5 +6,5 @@ openai
 requests
 bs4
 firebase
-torch==1.13.1+cpu
+torch==2.0.0+cpu
 transformers
