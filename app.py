@@ -226,7 +226,7 @@ def save_data_user(user_id, text, time, u0):
     data['conversation_log'].append('{"role": "user", ' \
                                      f'"content": "{text}"' \
                                      '}')
-    data['bert_input'].append(f'{u0}{text}^')
+    data['bert_input'].append(f'{u0}{text}[SEP]')
     data['last_time'] = int(time)
 
     print(data)
@@ -235,7 +235,7 @@ def save_data_assistant(user_id, response, c0, c1, c2):
     data['conversation_log'].append('{"role": "assistant", ' \
                                              f'"content": "{response}"' \
                                              '}')
-    data['bert_input'].append(f'{response}{c0}{c1}{c2}^')
+    data['bert_input'].append(f'{response}{c0}{c1}{c2}[SEP]')
 
     save_to_database(user_id)
 
