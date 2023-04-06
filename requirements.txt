@@ -6,4 +6,4 @@ requests
 bs4
 firebase
 torch
-transformers
+transformers==3.0.2
