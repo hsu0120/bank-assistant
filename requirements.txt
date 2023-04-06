@@ -5,4 +5,5 @@ openai
 requests
 bs4
 firebase
-torch
+torch==1.11.0+cpu
+transformers
