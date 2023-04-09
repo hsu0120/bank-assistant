@@ -8,5 +8,4 @@ bs4
 firebase
 torch==2.0.0+cpu
 transformers
-io
 firebase-admin
