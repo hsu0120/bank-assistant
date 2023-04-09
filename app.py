@@ -115,26 +115,26 @@ def model_init():
 
         bucket = storage.bucket()
         
-        blob = bucket.blob("BERT.pt")
-        model_state_content = blob.download_as_bytes()
-        model_state = torch.load(io.BytesIO(model_state_content), map_location=torch.device('cpu'))
+#         blob = bucket.blob("BERT.pt")
+#         model_state_content = blob.download_as_bytes()
+#         model_state = torch.load(io.BytesIO(model_state_content), map_location=torch.device('cpu'))
 
-    weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
+#     weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
     
-    print("model start")
+#     print("model start")
 
-    model = bert_down_stream.from_pretrained("bert-base-chinese", loss_weighted=weights.to(device), num_labels=2, return_dict=False)
+#     model = bert_down_stream.from_pretrained("bert-base-chinese", loss_weighted=weights.to(device), num_labels=2, return_dict=False)
     
-    print("model done")
+#     print("model done")
     
-    model = model.to(device)
-    model.resize_token_embeddings(len(tokenizer))
-    model.load_state_dict(model_state)
-    # model.load_state_dict(torch.load("model/BERT.pt"))
-    # model.load_state_dict(torch.load("model/BERT.pt", map_location=torch.device('cpu')))
-    model.eval()
+#     model = model.to(device)
+#     model.resize_token_embeddings(len(tokenizer))
+#     model.load_state_dict(model_state)
+#     # model.load_state_dict(torch.load("model/BERT.pt"))
+#     # model.load_state_dict(torch.load("model/BERT.pt", map_location=torch.device('cpu')))
+#     model.eval()
 
-    return model
+#     return model
 
 def word_to_tensor(bert_input):
         
@@ -225,7 +225,8 @@ database = firebase.FirebaseApplication(DB_URL, None)
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 tokenizer = token_init()
-model = model_init()
+model_init()
+# model = model_init()
 
 data_init = dict({'status': 0,
                   'last_time': 0, 
@@ -1078,7 +1079,7 @@ def greeting_response(user_id):
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
     
-    model_predict(data['bert_input'])
+#     model_predict(data['bert_input'])
 
     generic_template_message = TemplateSendMessage(
         template = GenericTemplate(
