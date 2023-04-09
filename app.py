@@ -117,7 +117,7 @@ def model_init():
         
         blob = bucket.blob("BERT.pt")
         model_state_content = blob.download_as_bytes()
-        model_state = torch.load(io.BytesIO(model_state_content))
+        model_state = torch.load(io.BytesIO(model_state_content), map_location=torch.device('cpu'))
 
     weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
     
@@ -129,7 +129,7 @@ def model_init():
     
     model = model.to(device)
     model.resize_token_embeddings(len(tokenizer))
-    model.load_state_dict(model_state, map_location=torch.device('cpu'))
+    model.load_state_dict(model_state)
     # model.load_state_dict(torch.load("model/BERT.pt"))
     # model.load_state_dict(torch.load("model/BERT.pt", map_location=torch.device('cpu')))
     model.eval()
