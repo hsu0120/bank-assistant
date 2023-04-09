@@ -115,9 +115,9 @@ def model_init():
 
         bucket = storage.bucket()
         
-    #     blob = bucket.blob("BERT.pt")
-    #     model_state_content = blob.download_as_bytes()
-    #     model_state = torch.load(io.BytesIO(model_state_content))
+        blob = bucket.blob("BERT.pt")
+        model_state_content = blob.download_as_bytes()
+        model_state = torch.load(io.BytesIO(model_state_content))
 
     weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
     
@@ -129,7 +129,7 @@ def model_init():
     
     model = model.to(device)
     model.resize_token_embeddings(len(tokenizer))
-#     model.load_state_dict(model_state, map_location=torch.device('cpu'))
+    model.load_state_dict(model_state, map_location=torch.device('cpu'))
     # model.load_state_dict(torch.load("model/BERT.pt"))
     # model.load_state_dict(torch.load("model/BERT.pt", map_location=torch.device('cpu')))
     model.eval()
@@ -203,7 +203,7 @@ def model_predict(bert_input):
 #         # 預測到會離開然後要做什麼？
 #         pass
 
-    return pred
+#     return pred
 
 
 # 初始化
@@ -1077,6 +1077,8 @@ def greeting_response(user_id):
     response = 'Hello～歡迎問小i各種關於外匯、信用卡，以及貸款的問題喔～'
 
     save_data_assistant(user_id, response, '[C00]', '[C10]', '[C20]')
+    
+    model_predict(data['bert_input'])
 
     generic_template_message = TemplateSendMessage(
         template = GenericTemplate(
