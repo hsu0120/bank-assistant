@@ -7,6 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, storage
 from firebase import firebase
 from flask import Flask, request
+from tempfile import NamedTemporaryFile
 
 import requests
 from bs4 import BeautifulSoup
@@ -84,15 +85,33 @@ def token_init():
     return tokenizer
 
 def model_init():
-    cred = credentials.Certificate(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'))
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': 'bankassistant-af7cf.appspot.com'
-    })
+    
+    with NamedTemporaryFile() as temp:
+        # 將 service account key 寫入暫存檔案中
+        content = '{"type": "service_account",'
+        content += f'"project_id": "{os.environ.get('project_id')}",'
+        content += f'"private_key_id": "{os.environ.get('private_key_id')}",'
+        content += f'"private_key": "{os.environ.get('private_key')}",'
+        content += f'"client_email": "{os.environ.get('client_email')}",'
+        content += f'"client_id": "{os.environ.get('client_id')}",'
+        content += '"auth_uri": "https://accounts.google.com/o/oauth2/auth","token_uri": "https://oauth2.googleapis.com/token","auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-lbjag%40bankassistant-af7cf.iam.gserviceaccount.com"}'
+        temp.write(bytes(content, 'utf-8'))  # 這裡需要將 json 字符串轉換為 bytes
+        temp.flush()
 
-    bucket = storage.bucket()
-#     blob = bucket.blob("BERT.pt")
-#     model_state_content = blob.download_as_bytes()
-#     model_state = torch.load(io.BytesIO(model_state_content))
+        # 讀取 service account key 的內容
+        cred = credentials.Certificate(temp.name)
+
+
+#         cred = credentials.Certificate(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'))
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': 'bankassistant-af7cf.appspot.com'
+        })
+
+        bucket = storage.bucket()
+        
+    #     blob = bucket.blob("BERT.pt")
+    #     model_state_content = blob.download_as_bytes()
+    #     model_state = torch.load(io.BytesIO(model_state_content))
 
     weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
 
