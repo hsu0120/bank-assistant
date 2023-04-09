@@ -9,4 +9,3 @@ firebase
 torch==2.0.0+cpu
 transformers
 firebase-admin
-tempfile
