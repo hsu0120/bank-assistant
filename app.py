@@ -120,8 +120,13 @@ def model_init():
     #     model_state = torch.load(io.BytesIO(model_state_content))
 
     weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
+    
+    print("model start")
 
     model = bert_down_stream.from_pretrained("bert-base-chinese", loss_weighted=weights.to(device), num_labels=2, return_dict=False)
+    
+    print("model done")
+    
     model = model.to(device)
     model.resize_token_embeddings(len(tokenizer))
 #     model.load_state_dict(model_state, map_location=torch.device('cpu'))
