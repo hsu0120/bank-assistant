@@ -363,14 +363,16 @@ def house_loan_address(text):
     return True if not result.startswith('No') else False
 
 def generate_card_information(text):
-    response = openai.ChatCompletion.create(
-      model="gpt-3.5-turbo",
-      messages=[
-            {"role": "system", "content": "You are a bank assistant."},
-            {"role": "user", "content": f"提供{text}1張玉山信用卡，用'卡名:15字的介紹'這個格式回覆"}
-        ]
-    )
-    ans = response.to_dict()['choices'][0]['message']['content']#.split('\n')
+#     response = openai.ChatCompletion.create(
+#       model="gpt-3.5-turbo",
+#       messages=[
+#             {"role": "system", "content": "You are a bank assistant."},
+#             {"role": "user", "content": f"提供{text}1張玉山信用卡，用'卡名:15字的介紹'這個格式回覆"}
+#         ]
+#     )
+#     ans = response.to_dict()['choices'][0]['message']['content']#.split('\n')
+
+    ans = '玉山卡'
 
     # result = list()
     # for a in ans:
