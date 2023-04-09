@@ -1,12 +1,20 @@
 import os
+import io
 import re
 import openai
 import datetime
+import firebase_admin
+from firebase_admin import credentials, storage
 from firebase import firebase
 from flask import Flask, request
 
 import requests
 from bs4 import BeautifulSoup
+
+import torch
+from transformers import BertTokenizer
+from transformers.models.bert.modeling_bert import BertPreTrainedModel, BertModel
+import torch.nn as nn
 
 from facebookbot import (
     FacebookBotApi, WebhookHandler
@@ -29,6 +37,144 @@ from facebookbot.models import (
     ButtonsTemplate, TemplateSendMessage, GenericTemplate, GenericElement, ImageElement, VideoElement
 )
 
+# prediction
+class bert_down_stream(BertPreTrainedModel):
+    def __init__(self, config, loss_weighted=None, num_labels = 2 ):
+        super(bert_down_stream, self).__init__(config)
+        self.num_labels = num_labels
+        self.loss_weighted =  loss_weighted
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(0.15)
+        #self.hidden1 = nn.Linear(config.hidden_size, 500)
+        #self.hidden2 = nn.Linear(500,150)
+        self.classifier = nn.Linear(config.hidden_size, self.num_labels)
+
+        self.init_weights()
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+        _, pooled_output = self.bert(input_ids, token_type_ids, attention_mask)
+        # pooled_output = self.dropout(pooled_output)
+        #hidden = F.relu(self.hidden1(pooled_output))
+        #hidden = F.relu(self.hidden2(hidden))
+        logits = self.classifier(pooled_output)
+        
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss(weight=self.loss_weighted)
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+            return loss,logits
+        else:
+            return logits,1
+
+def token_init():
+    tokenizer = BertTokenizer.from_pretrained("bert-base-chinese")
+    
+    additional_tokens = list()
+    
+    for i in range(1):
+        additional_tokens.append('[U'+str(i)+'1]')
+        additional_tokens.append('[U'+str(i)+'0]')
+    
+    for i in range(3):
+        additional_tokens.append('[C'+str(i)+'1]')
+        additional_tokens.append('[C'+str(i)+'0]')
+    
+    tokenizer.add_tokens(additional_tokens, special_tokens=True)
+
+    return tokenizer
+
+def model_init():
+    cred = credentials.Certificate(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'))
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': 'bankassistant-af7cf.appspot.com'
+    })
+
+    bucket = storage.bucket()
+#     blob = bucket.blob("BERT.pt")
+#     model_state_content = blob.download_as_bytes()
+#     model_state = torch.load(io.BytesIO(model_state_content))
+
+    weights = torch.tensor([329/1625, 1296/1625], dtype=torch.float32)
+
+    model = bert_down_stream.from_pretrained("bert-base-chinese", loss_weighted=weights.to(device), num_labels=2, return_dict=False)
+    model = model.to(device)
+    model.resize_token_embeddings(len(tokenizer))
+#     model.load_state_dict(model_state, map_location=torch.device('cpu'))
+    # model.load_state_dict(torch.load("model/BERT.pt"))
+    # model.load_state_dict(torch.load("model/BERT.pt", map_location=torch.device('cpu')))
+    model.eval()
+
+    return model
+
+def word_to_tensor(bert_input):
+        
+    word_pieces = [bert_input[0]]
+    segments_tensor = torch.tensor([0], dtype=torch.long)
+
+    for i in range(1, len(bert_input), 2):
+        tokens_user = tokenizer.tokenize(bert_input[i])
+        if (len(tokens_user) + len(word_pieces)) > 490:
+            # print("input out of bound ",len(word_pieces))
+            break
+
+        word_pieces += tokens_user
+        segments_tensor = torch.cat((segments_tensor, torch.tensor([0]*(len(tokens_user)), dtype=torch.long)), 0)
+        
+
+        tokens_assistant = tokenizer.tokenize(bert_input[i + 1])
+        if (len(tokens_assistant) + len(word_pieces)) > 490:
+            # print("responese out of bound ",len(word_pieces))
+            break
+
+        word_pieces += tokens_assistant
+        segments_tensor = torch.cat((segments_tensor, torch.tensor([1]*(len(tokens_assistant)), dtype=torch.long)), 0)
+        
+    # token to ids
+    ids = tokenizer.convert_tokens_to_ids(word_pieces)
+    tokens_tensor = torch.tensor(ids)
+
+    tokens_tensors = list()
+    segments_tensors = list()
+    
+    # padding
+    token_pads = torch.tensor([ 0 for i in range(500 - len(tokens_tensor)) ])
+    tokens_tensor = torch.cat((tokens_tensor, token_pads), 0)
+    tokens_tensors.append(tokens_tensor)
+
+    segments_pads = torch.tensor([ 0 for i in range(500 - len(segments_tensor)) ])
+    segments_tensor = torch.cat((segments_tensor, segments_pads), 0)
+    segments_tensors.append(segments_tensor)
+
+    tokens_tensors = torch.tensor(np.stack(tokens_tensors))
+    segments_tensors = torch.tensor(np.stack(segments_tensors))
+    
+    # mask tensor
+    masks_tensors = torch.zeros(tokens_tensors.shape, dtype=torch.long)
+    masks_tensors = masks_tensors.masked_fill(tokens_tensors != 0, 1)
+    
+    return tokens_tensors.to(device), segments_tensors.to(device), masks_tensors.to(device)
+
+def model_predict(bert_input):
+    tokens_tensors, segments_tensors, masks_tensors = word_to_token(bert_input)
+
+    outputs = model(input_ids=tokens_tensors, 
+                    token_type_ids=segments_tensors, 
+                    attention_mask=masks_tensors)
+
+    probability = nn.Sigmoid()
+
+    # pred, ind = torch.max(outputs[0].data, 1)
+    pred = probability(outputs[0].data[0][1])
+    
+    print(pred)
+    
+
+#     if pred >= 0.5:
+#         # 預測到會離開然後要做什麼？
+#         pass
+
+    return pred
+
 
 # 初始化
 app = Flask(__name__)
@@ -45,6 +191,11 @@ handler = WebhookHandler()
 openai.api_key = CHATGPT_TOKEN
 
 database = firebase.FirebaseApplication(DB_URL, None)
+
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
+tokenizer = token_init()
+model = model_init()
 
 data_init = dict({'status': 0,
                   'last_time': 0, 
@@ -77,6 +228,36 @@ def banking_category(text):
         model = 'text-davinci-003',
         prompt = 'The following is a statement and the category it falls into: ' \
                  'greeting, credit card, foreign currency, exchange rate, card loan, house loan, loan, deposit, investment, branch' \
+                f'\n\n{text}\nCategory: ',
+        temperature = 0,
+        max_tokens = 6,
+        top_p = 1,
+        frequency_penalty = 0,
+        presence_penalty = 0
+    )['choices'][0]['text'].replace(' ', '')
+    print(result)
+    return result
+
+def exchange_rate_category(text):
+    result = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = 'The following is a statement and the credit card category it falls into: ' \
+                 'rate, trend' \
+                f'\n\n{text}\nCategory: ',
+        temperature = 0,
+        max_tokens = 6,
+        top_p = 1,
+        frequency_penalty = 0,
+        presence_penalty = 0
+    )['choices'][0]['text'].replace(' ', '')
+    print(result)
+    return result
+
+def credit_card_category(text):
+    result = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = 'The following is a statement and the credit card category it falls into: ' \
+                 'reconmendation, payment, application, requirement' \
                 f'\n\n{text}\nCategory: ',
         temperature = 0,
         max_tokens = 6,
@@ -235,7 +416,7 @@ def save_data_assistant(user_id, response, c0, c1, c2):
     data['conversation_log'].append('{"role": "assistant", ' \
                                              f'"content": "{response}"' \
                                              '}')
-    data['bert_input'].append(f'{response}{c0}{c1}{c2}[SEP]')
+    data['bert_input'].append(f'{response}{c0}{c1}{c2}^')
 
     save_to_database(user_id)
 
@@ -380,6 +561,37 @@ def exchange_rate_response_end(user_id, currency):
     fb_bot_api.push_message(
         user_id, 
         message=buttons_template_message
+    )
+
+def exchange_rate_response_mis_recognize(user_id):
+    response = '請問你要查個別外幣匯率，還是要一次瀏覽多種外幣別呢？'
+    
+    data['status'] = 6
+
+    save_data_assistant(user_id, response, '[C01]', '[C10]', '[C20]')
+
+    buttons_template_message = TemplateSendMessage(
+        template = ButtonsTemplate(
+            text = response,
+            buttons = [
+                URLAction(
+                    title = '查看所有幣別匯率',
+                    url = 'https://www.esunbank.com.tw/bank/personal/deposit/rate/forex/foreign-exchange-rates',
+                    webview_height_ratio = 'full',
+                    messenger_extensions = None,
+                    fallback_url = None
+                ),
+                PostbackAction(
+                    title = '個別外幣匯率',
+                    payload = 'single_exchange_rate'
+                )
+            ] 
+        )
+    )
+    
+    fb_bot_api.push_message(
+        user_id, 
+        message = buttons_template_message
     )
 
 
@@ -547,6 +759,27 @@ def credit_card_response_end(user_id, text):
     fb_bot_api.push_message(
         user_id, 
         message = TextSendMessage(text = generic_element)
+    )
+
+def credit_card_response_mis_recognize(user_id):
+    response = '請問你喜歡以下哪一種類型的卡片呢? 我將根據你的偏好，立刻推薦適合的卡片'
+    
+    data['status'] = 13
+
+    save_data_assistant(user_id, response, '[C01]', '[C10]', '[C20]')
+
+    fb_bot_api.push_message(
+        user_id, 
+        message = TextSendMessage(
+            text = response,
+            quick_replies = [
+                TextQuickReply(title = '網購族', payload = 'credit_card_web'),
+                TextQuickReply(title = '百貨購物族', payload = 'credit_card_department'),
+                TextQuickReply(title = '生活達人族', payload = 'credit_card_life'),
+                TextQuickReply(title = '出國旅遊族', payload = 'credit_card_trip'),
+                TextQuickReply(title = '聯名卡', payload = 'credit_card_signed')
+            ]          
+        )
     )
 
   
@@ -986,8 +1219,11 @@ def handle_text_message(event):
         if data['status'] == 8:
             currency = foreign_currency(text)
             if currency == None:
-                # 看是不是銀行相關的其他服務
-                pass
+                category = banking_category(text)
+                if category == 'ForeignCurrency':
+                    foreign_currency_response(user_id)
+                else:
+                    not_understand_response(user_id)
             else:
                 currency = 'foreign_' + currency
                 foreign_currency_response_transaction(user_id, currency)
@@ -995,8 +1231,11 @@ def handle_text_message(event):
         elif data['status'] == 8.1:
             transaction = foreign_currency_transaction(text)
             if transaction == None:
-                # 看是不是銀行相關的其他服務
-                pass
+                category = banking_category(text)
+                if category == 'ForeignCurrency':
+                    foreign_currency_response(user_id)
+                else:
+                    not_understand_response(user_id)
             else:
                 transaction = data['foreign_currency'] + '_' + transaction
                 foreign_currency_response_amount(user_id, transaction)
@@ -1026,8 +1265,11 @@ def handle_text_message(event):
             way = exchange_rate_way(text)
             if way == None:
                 data['status'] = 0
-                # 看是不是銀行相關的其他服務
-                pass
+                category = banking_category(text)
+                if category == 'ExchangeRate':
+                    exchange_rate_response(user_id)
+                else:
+                    not_understand_response(user_id)
             elif way == 'all_exchange_rate':
                 exchange_rate_response_all_currency(user_id)
             else:
@@ -1036,7 +1278,11 @@ def handle_text_message(event):
         elif data['status'] == 6.1:
             currency = foreign_currency(text)
             if currency == None:
-                # 看是不是銀行相關的其他服務
+                category = banking_category(text)
+                if category == 'ExchangeRate':
+                    exchange_rate_response(user_id)
+                else:
+                    not_understand_response(user_id)
                 pass
             else:
                 exchange_rate_response_end(user_id, currency)
@@ -1115,11 +1361,19 @@ def handle_text_message(event):
 
             # 匯率
             elif category == 'ExchangeRate':
-                exchange_rate_response(user_id)
-
+                rate_category = exchange_rate_category(text)
+                if rate_category == 'Rate':
+                    exchange_rate_response(user_id)
+                else:
+                    exchange_rate_response_mis_recognize(user_id)
+                
             # 信用卡
             elif category == 'CreditCard':
-                credit_card_response(user_id)
+                card_category = credit_card_category(text)
+                if card_category == 'Reconmendation':
+                    credit_card_response(user_id)
+                else:
+                    credit_card_response_mis_recognize(user_id)
             
             # 貸款
             elif category == 'Loan':
@@ -1137,7 +1391,7 @@ def handle_text_message(event):
             elif category == 'Greeting':
                 greeting_response(user_id)
 
-            # 投資
+            # 其他
             else:
                 other_response(user_id, text)
         
