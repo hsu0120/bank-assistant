@@ -85,16 +85,22 @@ def token_init():
     return tokenizer
 
 def model_init():
+    project_id = os.environ.get('project_id')
+    private_key_id = os.environ.get('private_key_id')
+    private_key = os.environ.get('private_key')
+    client_email = os.environ.get('client_email')
+    client_id = os.environ.get('client_id')
     
+    content = '{"type": "service_account",'
+    content += f'"project_id": "{project_id}",'
+    content += f'"private_key_id": "{private_key_id}",'
+    content += f'"private_key": "{private_key}",'
+    content += f'"client_email": "{client_email}",'
+    content += f'"client_id": "{client_id}",'
+    content += '"auth_uri": "https://accounts.google.com/o/oauth2/auth","token_uri": "https://oauth2.googleapis.com/token","auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-lbjag%40bankassistant-af7cf.iam.gserviceaccount.com"}'
+        
     with NamedTemporaryFile() as temp:
         # 將 service account key 寫入暫存檔案中
-        content = '{"type": "service_account",'
-        content += f'"project_id": "{os.environ.get('project_id')}",'
-        content += f'"private_key_id": "{os.environ.get('private_key_id')}",'
-        content += f'"private_key": "{os.environ.get('private_key')}",'
-        content += f'"client_email": "{os.environ.get('client_email')}",'
-        content += f'"client_id": "{os.environ.get('client_id')}",'
-        content += '"auth_uri": "https://accounts.google.com/o/oauth2/auth","token_uri": "https://oauth2.googleapis.com/token","auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-lbjag%40bankassistant-af7cf.iam.gserviceaccount.com"}'
         temp.write(bytes(content, 'utf-8'))  # 這裡需要將 json 字符串轉換為 bytes
         temp.flush()
 
