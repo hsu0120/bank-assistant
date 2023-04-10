@@ -702,9 +702,9 @@ def foreign_currency_response_end(user_id, currency, transaction, ex_currency, e
         exchange_rate = get_exchange_rate(currency, 'BBoardRate')
 
     if ex_currency == 'TWD':
-        result = round(float(ex_amount) * float(exchange_rate), 2)
+        result = round(float(ex_amount) * (1 / float(exchange_rate)), 2)
     else:
-        result = round(float(ex_amount) * (1/ float(exchange_rate)), 2)
+        result = round(float(ex_amount) * float(exchange_rate), 2)
         currency = 'TWD'
 
     date = str(datetime.datetime.now()).split('.')[0]
